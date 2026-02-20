@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Joining Say Whaaat?</title>
+    <link rel="stylesheet" href="/style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-overlay"></div>
+    
+    <div class="container">
+        <!-- Recreating AppHeader structure -->
+        <header class="logo-header">
+            <h1 class="logo">
+                <span class="say-text">Say</span>
+                <span class="whaaat-text">Whaaat?</span>
+            </h1>
+        </header>
+
+        <div class="content-box">
+            <h2 id="status-title">Almost there!</h2>
+            <p id="status-desc">We're taking you to the game.</p>
+            
+            <div class="action-area">
+				<a id="store-link" href="#">
+					<img src="googleplaybutton.png" alt="Get it on Google Play" style="width: 200px;">
+				</a>
+			</div>
+        </div>
+
+        <div class="footer">
+            <span class="version-tag">SAY WHAAAT? MOBILE</span>
+        </div>
+    </div>
+
+    <script>
+        var packageId = "com.saywhaaat.app"; 
+        var playStoreUrl = "https://play.google.com/store/apps/details?id=" + packageId;
+
+        document.getElementById('store-link').href = playStoreUrl;
+
+        var isAndroid = /Android/i.test(navigator.userAgent);
+        var statusTitle = document.getElementById('status-title');
+        var statusDesc = document.getElementById('status-desc');
+
+        if (isAndroid) {
+            setTimeout(function() {
+                window.location.href = playStoreUrl;
+            }, 2000);
+        } else {
+            statusTitle.textContent = "WHAAAT are you doing here?!";
+            statusDesc.textContent = "Click below and get the app!";
+        }
+    </script>
+</body>
+</html>

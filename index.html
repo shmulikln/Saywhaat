@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Say Whaaat?</title>
+    
+    <!-- PWA & Theme -->
+    <meta name="theme-color" content="#7c3aed">
+    <link rel="manifest" href="./manifest.webmanifest.json">
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" href="./icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icon.svg">
+
+    <!-- Apple Specific -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Say Whaaat?">
+    <meta name="format-detection" content="telephone=no">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              'outfit': ['Outfit', 'sans-serif'],
+              'luckiest-guy': ['Luckiest Guy', 'cursive'],
+              'secular-one': ['Secular One', 'sans-serif'],
+            },
+            animation: {
+              'glitch': 'glitch 0.2s infinite',
+              'slot-spin': 'slot-spin 0.1s infinite',
+              'hard-cut': 'hardCut 0.05s ease-in',
+              'word-snap': 'wordSnap 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+            },
+            keyframes: {
+              glitch: {
+                '0%, 100%': { transform: 'translate(0)' },
+                '33%': { transform: 'translate(-2px, 2px)' },
+                '66%': { transform: 'translate(2px, -2px)' },
+              },
+              'slot-spin': {
+                '0%': { transform: 'translateY(0)' },
+                '100%': { transform: 'translateY(-10px)' },
+              },
+              hardCut: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              wordSnap: {
+                '0%': { transform: 'translateY(40px) scale(0.7)', opacity: '0', filter: 'blur(10px)' },
+                '70%': { transform: 'translateY(-5px) scale(1.05)', opacity: '1', filter: 'blur(0px)' },
+                '100%': { transform: 'translateY(0) scale(1)', opacity: '1', filter: 'blur(0px)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Secular+One&display=swap" rel="stylesheet">
+    <style>
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+      }
+      .animate-chaos-cut {
+        animation: fadeIn 0.05s steps(2);
+      }
+      
+      @keyframes snackbar-in-out {
+        0% { transform: translateY(120%); opacity: 0; }
+        15%, 85% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(120%); opacity: 0; }
+      }
+      .animate-snackbar {
+        animation: snackbar-in-out 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+      }
+
+      :root {
+        --safe-area-top: env(safe-area-inset-top);
+        --safe-area-bottom: env(safe-area-inset-bottom);
+      }
+
+      body {
+        font-family: 'Outfit', sans-serif;
+        overscroll-behavior-y: contain;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+        background: #4c1d95;
+        overflow-y: auto;
+      }
+
+      html[lang="he"] body:not(.font-luckiest-guy), 
+      html[lang="he"] button:not(.font-luckiest-guy), 
+      html[lang="he"] input, 
+      html[lang="he"] h2, 
+      html[lang="he"] h3, 
+      html[lang="he"] span:not(.font-luckiest-guy),
+      html[lang="he"] p,
+      html[lang="ar"] body:not(.font-luckiest-guy), 
+      html[lang="ar"] button:not(.font-luckiest-guy), 
+      html[lang="ar"] input, 
+      html[lang="ar"] h2, 
+      html[lang="ar"] h3, 
+      html[lang="ar"] span:not(.font-luckiest-guy),
+      html[lang="ar"] p {
+        font-family: 'Secular One', sans-serif;
+      }
+      
+      .brand-text { font-family: 'Luckiest Guy', cursive !important; }
+
+      input, textarea { user-select: text; -webkit-user-select: text; }
+
+      input[type=range] {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        outline: none;
+        cursor: pointer;
+      }
+      
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 36px;
+        width: 36px;
+        border-radius: 50%;
+        background: #FBBF24;
+        cursor: pointer;
+        border: 4px solid white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        margin-top: -14px;
+        transition: transform 0.1s ease-out;
+        position: relative;
+        z-index: 20;
+      }
+      
+      input[type=range]:active::-webkit-slider-thumb { transform: scale(1.1); }
+
+      input[type=range]::-webkit-slider-runnable-track { height: 8px; background: transparent; border-radius: 4px; }
+
+      input[type=range]::-moz-range-thumb {
+        height: 36px;
+        width: 36px;
+        border-radius: 50%;
+        background: #FBBF24;
+        cursor: pointer;
+        border: 4px solid white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        transition: transform 0.1s ease-out;
+      }
+      
+      input[type=range]:active::-moz-range-thumb { transform: scale(1.1); }
+
+      input[type=range]::-moz-range-track { height: 8px; background: transparent; border-radius: 4px; }
+
+      .static-noise {
+        background: url('https://media.giphy.com/media/oEI9uWUPr9WUM/giphy.gif');
+        background-size: cover;
+        opacity: 0.05;
+        mix-blend-mode: overlay;
+      }
+    </style>
+    <script>
+      if (localStorage.getItem('saywhaaat_dark_mode') === 'true' || 
+          (!('saywhaaat_dark_mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.23.1?external=react,react-dom",
+    "qrcode.react": "https://esm.sh/qrcode.react@4.2.0?external=react",
+    "@tsparticles/slim": "https://esm.sh/@tsparticles/slim@3.9.0",
+    "@tsparticles/engine": "https://esm.sh/@tsparticles/engine@3.9.0",
+    "@tsparticles/react": "https://esm.sh/@tsparticles/react@3.0.0?external=react,@tsparticles/engine",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+    "firebase/database": "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js",
+    "firebase/app-check": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+    "firebase/": "https://esm.sh/firebase@^12.9.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="./index.css">
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+	
+<script>
+    const capacitorAvailable = typeof Capacitor !== 'undefined' && Capacitor.Plugins;
+    
+    if (capacitorAvailable && Capacitor.Plugins.AdMob) {
+        const { AdMob } = Capacitor.Plugins;
+        let adShownThisRound = false;
+
+        async function initializeAdMob() {
+            try {
+                await AdMob.initialize();
+                console.log("AD LOG: AdMob Initialized");
+                prepareAd();
+            } catch (e) {
+                console.error("AD LOG: Init Failed", e);
+            }
+        }
+
+        async function prepareAd() {
+            try {
+                await AdMob.prepareInterstitial({
+                    adId: 'ca-app-pub-7599308880531325/6231560290', 
+                    isTesting: true 
+                });
+                console.log("AD LOG: Ad prepped and ready");
+            } catch (e) {
+                console.log("AD LOG: Prep failed", e);
+            }
+        }
+
+        async function showAd() {
+            try {
+                await AdMob.showInterstitial();
+                adShownThisRound = true;
+                prepareAd();
+            } catch (e) {
+                console.log("AD LOG: Show failed", e);
+            }
+        }
+
+        setInterval(() => {
+            const currentUrl = window.location.href;
+            if (currentUrl.includes('gameover')) {
+                if (!adShownThisRound) {
+                    console.log("AD LOG: Game Over detected! Showing Ad...");
+                    showAd();
+                }
+            } else {
+                adShownThisRound = false;
+            }
+        }, 2000);
+
+        initializeAdMob();
+    } else {
+        console.log("AD LOG: Capacitor AdMob not available in this environment.");
+    }
+</script>
+<div id="root"></div>
+<script type="module" src="./index.tsx"></script>
+</body>
+</html>

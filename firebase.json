@@ -1,0 +1,22 @@
+{
+  "hosting": {
+    "public": "public",
+    "rewrites": [
+      {
+        "source": "/.well-known/**",
+        "destination": "/.well-known/**"
+      },
+      {
+        "source": "/join/**",
+        "destination": "/index.html" 
+      },
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "say-whaaat-charades-game",
+          "region": "us-west1"
+        }
+      }
+    ]
+  }
+}

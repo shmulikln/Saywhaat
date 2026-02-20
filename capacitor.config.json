@@ -1,0 +1,11 @@
+
+{
+  "appId": "com.saywhaaat.app",
+  "appName": "Say Whaaat?",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

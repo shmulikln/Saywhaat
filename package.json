@@ -1,0 +1,31 @@
+{
+  "name": "say-whaaat?---charades-game",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@tsparticles/engine": "3.9.0",
+    "@tsparticles/react": "3.0.0",
+    "@tsparticles/slim": "3.9.0",
+    "firebase": "^12.9.0",
+    "qrcode.react": "4.2.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-router-dom": "6.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}

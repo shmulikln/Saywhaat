@@ -1,0 +1,152 @@
+/* holy.css - Say Whaaat? Branding */
+
+:root {
+    --purple-deep: #4c1d95;
+    --purple-main: #7c3aed;
+    --yellow-brand: #FBBF24;
+    --white: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--purple-deep);
+    color: var(--white);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Background Gradient - Matching ParticleBackground.tsx */
+.background-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom right, #4338ca, #7e22ce, #be185d);
+    z-index: -1;
+}
+
+.container {
+    width: 100%;
+    max-width: 400px;
+    padding: 24px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Logo Styling - Replicating AppHeader.tsx */
+.logo-header {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 0.8;
+    font-family: 'Luckiest Guy', cursive;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    filter: drop-shadow(0px 4px 8px rgba(30, 0, 121, 0.73));
+}
+
+.say-text {
+    font-size: 60px;
+    color: var(--white);
+}
+
+.whaaat-text {
+    font-size: 72px;
+    color: var(--yellow-brand);
+    transform: rotate(4deg);
+    margin-top: 10px;
+}
+
+/* Glassmorphism Box */
+.content-box {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    padding: 40px 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+h2 {
+    font-size: 24px;
+    font-weight: 900;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+p {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+    margin-bottom: 30px;
+}
+
+.helper-text {
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 15px;
+}
+
+/* Button - Replicating SetupScreen/LobbyScreen buttons */
+.button {
+    display: block;
+    width: 100%;
+    height: 60px;
+    line-height: 60px;
+    background-color: var(--yellow-brand);
+    color: var(--purple-deep);
+    text-decoration: none;
+    font-weight: 900;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(251, 191, 36, 0.3);
+    transition: all 0.2s ease;
+}
+
+.button:active {
+    transform: scale(0.95);
+    box-shadow: 0 5px 15px rgba(251, 191, 36, 0.2);
+}
+
+.footer {
+    margin-top: 40px;
+    opacity: 0.3;
+}
+
+.version-tag {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.4em;
+}
+
+/* Responsive Scaling */
+@media (max-width: 380px) {
+    .say-text { font-size: 48px; }
+    .whaaat-text { font-size: 58px; }
+    .content-box { padding: 30px 20px; }
+}

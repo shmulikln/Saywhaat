@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Say Whaaat?</string>
+    <string name="title_activity_main">Say Whaaat?</string>
+    <string name="package_name">com.saywhaaat.app</string>
+    <string name="custom_url_scheme">com.saywhaaat.app</string>
+    <string name="admob_app_id">ca-app-pub-YOUR_ACTUAL_ID_HERE~12345</string>
+</resources>

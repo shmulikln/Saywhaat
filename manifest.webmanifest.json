@@ -1,0 +1,44 @@
+
+{
+  "name": "Say Whaaat? - Charades Game",
+  "short_name": "Say Whaaat?",
+  "description": "A beautifully designed word guessing game where you describe words to your friends.",
+  "id": "com.saywhaaat.app",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#4c1d95",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Local Play",
+      "short_name": "Local",
+      "description": "Start a game on a single device",
+      "url": "/#/setup?mode=local",
+      "icons": [{ "src": "icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Join Game",
+      "short_name": "Join",
+      "description": "Join an existing online game",
+      "url": "/#/setup?mode=online&defaultTab=join",
+      "icons": [{ "src": "icon.svg", "sizes": "192x192" }]
+    }
+  ]
+}
