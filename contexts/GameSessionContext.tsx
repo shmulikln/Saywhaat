@@ -8,6 +8,7 @@ import { applyMinigameOutcome } from '../utils/minigameLogic';
 import { calculateStartTurn, calculateAdvanceTurn, calculateGuess, calculateSkip } from '../utils/turnLogic';
 import { useTranslations } from './TranslationsContext';
 import { listenToGameUpdates, createGameInDb, getGameFromDb, runGameTransaction, addPendingPlayer, listenToPendingPlayers } from '../services/firebaseService';
+import { AdMob } from '@capacitor-community/admob';
 
 const LOCAL_PLAYER_ID_KEY = 'sayWhaaat_localPlayerId';
 
@@ -44,6 +45,7 @@ const GameSessionContext = createContext<GameSessionContextType | undefined>(und
 export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [gameSession, setGameSessionState] = useState<GameSession | null>(null);
   const [localPlayerId, setLocalPlayerId] = useState<string | null>(null);
+  const adShownThisRoundRef = useRef(false);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -281,6 +283,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const _internal_startGame = useCallback((sessionToStart?: GameSession) => {
+    adShownThisRoundRef.current = false; // Reset ad flag for the new round
     const currentGame = sessionToStart || gameSessionRef.current;
     if (!currentGame) return;
 
@@ -602,9 +605,40 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [localPlayerId, navigate]);
 
 
+  const prepareAd = useCallback(async () => {
+    try {
+      await AdMob.prepareInterstitial({
+        adId: 'ca-app-pub-7599308880531325/6231560290',
+        isTesting: true,
+      });
+      console.log("AD LOG: Ad prepped and ready");
+    } catch (e) {
+      console.log("AD LOG: Prep failed", e);
+    }
+  }, []);
+
+  const showAd = useCallback(async () => {
+    if (adShownThisRoundRef.current) {
+      console.log("AD LOG: Ad already shown this round");
+      return;
+    }
+    try {
+      await AdMob.showInterstitial();
+      adShownThisRoundRef.current = true;
+      prepareAd(); // Pre-load next ad
+    } catch (e) {
+      console.log("AD LOG: Show failed", e);
+      // Even if showing fails, prepare the next one
+      prepareAd();
+    }
+  }, [prepareAd]);
+
   const startRematch = useCallback(async () => {
     const currentGame = gameSessionRef.current;
     if (!currentGame) return;
+
+    // Show an ad before starting the rematch
+    await showAd();
 
     setIsFetching(true);
     try {

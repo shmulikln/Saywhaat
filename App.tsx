@@ -15,6 +15,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoadingScreen from './components/LoadingScreen';
 import WelcomeScreen from './components/WelcomeScreen';
 import { App as CapApp } from '@capacitor/app'; // Correct import
+import { AdMob, AdOptions, InterstitialAdPluginEvents } from '@capacitor-community/admob';
 
 // ... (keep your useKeepScreenAwake code exactly as it is) ...
 
@@ -23,6 +24,15 @@ const App: React.FC = () => {
   const { setLanguage, isLoading: isTranslationsLoading, language: currentLang } = useTranslations();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem('saywhaaat_dark_mode') === 'true' ||
+        (!('saywhaaat_dark_mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
 // useKeepScreenAwake();
 
@@ -81,7 +91,41 @@ const App: React.FC = () => {
   }, [navigate]);
   // --- NEW: DEEP LINK LISTENER END ---
 
-  // ... (Keep the rest of your existing useEffects for language and routing) ...
+  // --- NEW: ADMOB HANDLER START ---
+  // Initialize AdMob once on mount
+  const adMobInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (adMobInitializedRef.current) {
+      return;
+    }
+    adMobInitializedRef.current = true;
+
+    async function initializeAdMob() {
+      try {
+        await AdMob.initialize();
+        console.log("AD LOG: AdMob Initialized");
+        prepareAdInitial();
+      } catch (e) {
+        console.error("AD LOG: Init Failed", e);
+      }
+    }
+
+    async function prepareAdInitial() {
+      try {
+        await AdMob.prepareInterstitial({
+          adId: 'ca-app-pub-7599308880531325/6231560290',
+          isTesting: true
+        });
+        console.log("AD LOG: Ad prepped and ready");
+      } catch (e) {
+        console.log("AD LOG: Prep failed", e);
+      }
+    }
+
+    initializeAdMob();
+  }, []);
+  // --- NEW: ADMOB HANDLER END ---
 
   useEffect(() => {
     const langToSet = gameSession?.language || DEFAULT_LANGUAGE;

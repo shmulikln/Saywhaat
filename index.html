@@ -19,46 +19,9 @@
     <meta name="apple-mobile-web-app-title" content="Say Whaaat?">
     <meta name="format-detection" content="telephone=no">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              'outfit': ['Outfit', 'sans-serif'],
-              'luckiest-guy': ['Luckiest Guy', 'cursive'],
-              'secular-one': ['Secular One', 'sans-serif'],
-            },
-            animation: {
-              'glitch': 'glitch 0.2s infinite',
-              'slot-spin': 'slot-spin 0.1s infinite',
-              'hard-cut': 'hardCut 0.05s ease-in',
-              'word-snap': 'wordSnap 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-            },
-            keyframes: {
-              glitch: {
-                '0%, 100%': { transform: 'translate(0)' },
-                '33%': { transform: 'translate(-2px, 2px)' },
-                '66%': { transform: 'translate(2px, -2px)' },
-              },
-              'slot-spin': {
-                '0%': { transform: 'translateY(0)' },
-                '100%': { transform: 'translateY(-10px)' },
-              },
-              hardCut: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              },
-              wordSnap: {
-                '0%': { transform: 'translateY(40px) scale(0.7)', opacity: '0', filter: 'blur(10px)' },
-                '70%': { transform: 'translateY(-5px) scale(1.05)', opacity: '1', filter: 'blur(0px)' },
-                '100%': { transform: 'translateY(0) scale(1)', opacity: '1', filter: 'blur(0px)' },
-              }
-            }
-          }
-        }
-      }
-    </script>
+    <!-- Tailwind CDN removed for production safety.
+         Install Tailwind as a PostCSS plugin or use the Tailwind CLI.
+         See: https://tailwindcss.com/docs/installation -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -173,14 +136,6 @@
         mix-blend-mode: overlay;
       }
     </style>
-    <script>
-      if (localStorage.getItem('saywhaaat_dark_mode') === 'true' || 
-          (!('saywhaaat_dark_mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    </script>
   <script type="importmap">
 {
   "imports": {
@@ -206,62 +161,7 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
 	
-<script>
-    const capacitorAvailable = typeof Capacitor !== 'undefined' && Capacitor.Plugins;
-    
-    if (capacitorAvailable && Capacitor.Plugins.AdMob) {
-        const { AdMob } = Capacitor.Plugins;
-        let adShownThisRound = false;
-
-        async function initializeAdMob() {
-            try {
-                await AdMob.initialize();
-                console.log("AD LOG: AdMob Initialized");
-                prepareAd();
-            } catch (e) {
-                console.error("AD LOG: Init Failed", e);
-            }
-        }
-
-        async function prepareAd() {
-            try {
-                await AdMob.prepareInterstitial({
-                    adId: 'ca-app-pub-7599308880531325/6231560290', 
-                    isTesting: true 
-                });
-                console.log("AD LOG: Ad prepped and ready");
-            } catch (e) {
-                console.log("AD LOG: Prep failed", e);
-            }
-        }
-
-        async function showAd() {
-            try {
-                await AdMob.showInterstitial();
-                adShownThisRound = true;
-                prepareAd();
-            } catch (e) {
-                console.log("AD LOG: Show failed", e);
-            }
-        }
-
-        setInterval(() => {
-            const currentUrl = window.location.href;
-            if (currentUrl.includes('gameover')) {
-                if (!adShownThisRound) {
-                    console.log("AD LOG: Game Over detected! Showing Ad...");
-                    showAd();
-                }
-            } else {
-                adShownThisRound = false;
-            }
-        }, 2000);
-
-        initializeAdMob();
-    } else {
-        console.log("AD LOG: Capacitor AdMob not available in this environment.");
-    }
-</script>
+<!-- AdMob initialization moved to App.tsx useEffect for proper React lifecycle management -->
 <div id="root"></div>
 <script type="module" src="./index.tsx"></script>
 </body>

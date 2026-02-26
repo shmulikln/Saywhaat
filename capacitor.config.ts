@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Say Whaaat?',
   webDir: 'dist', // Ensure this matches your build folder (e.g., 'build' or 'dist')
   server: {
-    androidScheme: 'saywhaaat'
+    androidScheme: 'https'
   },
   android: {
     // This is the CRITICAL 2025 setting for Android 15+
