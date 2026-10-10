@@ -58,7 +58,7 @@ body {
     line-height: 0.8;
     font-family: 'Luckiest Guy', cursive;
     text-transform: uppercase;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.02em;
     filter: drop-shadow(0px 4px 8px rgba(30, 0, 121, 0.73));
 }
 

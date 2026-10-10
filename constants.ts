@@ -8,6 +8,11 @@ export const BUILD_ID = "REV-210-UPDATE";
 export const DEFAULT_WINNING_SCORE: WinningScore = 10;
 export const DEFAULT_LANGUAGE: Language = Language.EN;
 export const TURN_DURATION_SECONDS: number = 60;
+export const DUO_TURN_DURATION_SECONDS: number = 30;
+
+export const getDuoTotalRounds = (winningScore: number): number => {
+  return Math.max(2, Math.round(winningScore / 5));
+};
 
 // Chaos Mode Constants
 export const CHAOS_EVENT_CHANCE = 0.50; // 50% chance for ANY chaos event

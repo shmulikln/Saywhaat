@@ -52,10 +52,22 @@ const CardDrawScreen: React.FC = () => {
       const timer = setTimeout(() => { 
         triggerHaptic('SUCCESS');
         applyCardAction({}); 
-      }, 300);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [gameSession, isMyTurn, applyCardAction]);
+
+  useEffect(() => {
+    const { minigameState } = gameSession || {};
+    if (!minigameState) return;
+    const { revealedOutcome, actionApplied } = minigameState;
+    if (revealedOutcome && !actionApplied && isMyTurn && revealedOutcome.requiresPlayerChoice) {
+      const timer = setTimeout(() => {
+        setPlayerSelectionModalOpen(true);
+      }, 850);
+      return () => clearTimeout(timer);
+    }
+  }, [gameSession, isMyTurn]);
 
   useEffect(() => {
     const generateToastMessage = (oldPlayers: { [id: string]: Player }, newPlayers: { [id: string]: Player }, outcome: NonNullable<typeof revealedOutcome>, activePlayerId: string, targetPlayerId?: string) => {
@@ -86,6 +98,30 @@ const CardDrawScreen: React.FC = () => {
                  if (td > 0 && targetPlayerName) return `${targetPlayerName}'s score was doubled to ${newPlayers[targetPlayerId!].score}!`;
                  break;
             case MinigameCardActionType.RANDOMIZE_SCORES: return "Everyone's scores have been randomized!";
+            case MinigameCardActionType.ROBIN_HOOD: return "🏹 Robin Hood took points from the leader and gave them to last place!";
+            case MinigameCardActionType.UNDERDOG_SURGE: {
+                const diff = getScoreDiff(activePlayerId);
+                return `🚀 Underdog Surge! ${activePlayerName} gained ${diff} points!`;
+            }
+            case MinigameCardActionType.TAX_COLLECTOR: {
+                const diff = getScoreDiff(activePlayerId);
+                return `💰 Tax Collector! ${activePlayerName} collected ${diff} points in taxes!`;
+            }
+            case MinigameCardActionType.THE_EQUALIZER: return "⚖️ The Equalizer balanced everyone's scores!";
+            case MinigameCardActionType.DOUBLE_OR_NOTHING: {
+                const diff = getScoreDiff(activePlayerId);
+                return diff > 0 ? `🎲 Double or Nothing: ${activePlayerName} won +${diff} points!` : `🎲 Double or Nothing: ${activePlayerName} lost ${Math.abs(diff)} points!`;
+            }
+            case MinigameCardActionType.RUSSIAN_ROULETTE: {
+                const activeDiff = getScoreDiff(activePlayerId);
+                return activeDiff > 0 
+                  ? `🎯 Russian Roulette: ${activePlayerName} won 3 points from ${targetPlayerName}!` 
+                  : `🎯 Russian Roulette: ${targetPlayerName} won 3 points from ${activePlayerName}!`;
+            }
+            case MinigameCardActionType.MYSTERY_BOX: {
+                const diff = getScoreDiff(activePlayerId);
+                return diff >= 0 ? `🎁 Mystery Box: ${activePlayerName} gained ${diff} points!` : `🎁 Mystery Box: ${activePlayerName} lost ${Math.abs(diff)} points!`;
+            }
         }
         return null;
     };
@@ -112,15 +148,24 @@ const CardDrawScreen: React.FC = () => {
   const handleCardClick = (cardId: string) => {
     triggerHaptic('LIGHT');
     selectCard(cardId);
-  }
+  };
 
   const renderThreeCards = () => (
-    <div className="flex justify-center items-center gap-4 w-full min-h-[250px] relative z-10 animate-chaos-cut">
+    <div className="flex justify-center items-center gap-3 sm:gap-6 w-full min-h-[300px] py-4 relative z-10 animate-fade-in">
       {minigameState.cards.map((card) => {
         const isClickable = isMyTurn && !selectedCardId;
         return (
-          <div key={card.id} className={`relative w-[28%] max-w-[120px] transition-transform duration-300 ${isClickable ? 'cursor-pointer hover:scale-105 hover:-translate-y-2' : ''}`} onClick={(e) => { e.stopPropagation(); if (isClickable) handleCardClick(card.id); }}>
-            <div className="pt-[140%]"></div>
+          <div 
+            key={card.id} 
+            className={`relative w-[29%] max-w-[130px] transition-all duration-300 ${
+              isClickable ? 'cursor-pointer hover:scale-105 hover:-translate-y-3 active:scale-95' : ''
+            }`} 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              if (isClickable) handleCardClick(card.id); 
+            }}
+          >
+            <div className="pt-[145%]"></div>
             <div className="absolute inset-0">
                 <FlippableCard card={card} isFlipped={false} isSelected={false} isDisabled={false} />
             </div>
@@ -134,44 +179,62 @@ const CardDrawScreen: React.FC = () => {
     const card = minigameState.cards.find(c => c.id === selectedCardId);
     if (!card) return null;
     return (
-        <div className="flex justify-center items-center w-full min-h-[400px] py-4 relative z-10 animate-chaos-cut">
-            <div className="relative w-[70vw] max-w-[280px]">
-                <div className="pt-[140%]"></div>
-                <div className="absolute inset-0">
-                    <FlippableCard card={card} isFlipped={hasRevealed} isSelected={true} isDisabled={false} onActionClick={revealedOutcome?.requiresPlayerChoice && isMyTurn && !actionApplied ? () => {
-                      triggerHaptic('LIGHT');
-                      setPlayerSelectionModalOpen(true);
-                    } : undefined} />
-                </div>
-            </div>
+      <div className="flex justify-center items-center w-full min-h-[440px] sm:min-h-[520px] py-2 relative z-10 animate-chaos-card-zoom">
+        <div className="relative w-[88vw] max-w-[360px] sm:max-w-[420px] h-[58vh] max-h-[520px] min-h-[420px]">
+          <FlippableCard 
+            card={card} 
+            isFlipped={hasRevealed} 
+            isSelected={true} 
+            isZoomed={true}
+            isDisabled={false} 
+            onActionClick={revealedOutcome?.requiresPlayerChoice && isMyTurn && !actionApplied ? () => {
+              triggerHaptic('LIGHT');
+              setPlayerSelectionModalOpen(true);
+            } : undefined} 
+          />
         </div>
-  );
+      </div>
+    );
   };
 
   return (
     <>
-      <div className="min-h-screen flex flex-col items-center p-4 pt-8 sm:pt-12 relative overflow-hidden animate-hard-cut">
+      <div className="min-h-screen flex flex-col items-center p-4 pt-safe-top relative overflow-hidden">
         {toast && (
-          <div key={toast.key} className="fixed bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-slate-800/95 backdrop-blur-sm text-white py-3 px-5 rounded-lg shadow-2xl z-50 animate-snackbar" role="status">
-            <p className="text-base font-medium text-center">{toast.message}</p>
+          <div key={toast.key} className="fixed bottom-6 inset-x-4 sm:inset-x-auto sm:right-8 sm:max-w-md bg-slate-900/95 backdrop-blur-md text-white py-3.5 px-5 rounded-2xl shadow-[0_15px_30px_rgba(0,0,0,0.5)] border border-white/20 z-50 animate-snackbar flex items-center justify-center gap-2" role="status">
+            <span className="text-xl">⚡</span>
+            <p className="text-sm sm:text-base font-bold text-center">{toast.message}</p>
           </div>
         )}
         <AppHeader />
-        <div className="relative w-full max-w-3xl flex flex-col items-center">
-          <h2 className="text-3xl font-bold mb-2 text-yellow-300 drop-shadow-lg">{t('minigameTitle')}</h2>
-          <p className="text-lg mb-8 text-slate-200 min-h-[2rem] text-center flex items-center justify-center">
-            {!selectedCardId && (isMyTurn ? t('minigamePickACard') : t('minigameWaiting', { playerName: activePlayerName }))}
-            {selectedCardId && !hasRevealed && (<span className="animate-pulse">{isMyTurn ? t('minigameRevealPrompt') : t('minigameWaiting', { playerName: activePlayerName })}</span>)}
-          </p>
+        <div className="relative w-full max-w-3xl flex flex-col items-center flex-grow justify-between">
+          <div className="flex flex-col items-center w-full">
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-widest bg-orange-500/20 text-orange-300 border border-orange-400/30 mb-2 animate-pulse">
+              🔥 {t('chaosMode')}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-200 to-yellow-400 drop-shadow-md text-center">
+              {t('minigameTitle')}
+            </h2>
+            <p className="text-base sm:text-lg mb-4 sm:mb-6 text-white/80 min-h-[2rem] text-center flex items-center justify-center font-medium px-4">
+              {!selectedCardId && (isMyTurn ? t('minigamePickACard') : t('minigameWaiting', { playerName: activePlayerName }))}
+              {selectedCardId && !hasRevealed && (<span className="animate-pulse text-[#FBBF24] font-bold">{isMyTurn ? t('minigameRevealPrompt') : t('minigameWaiting', { playerName: activePlayerName })}</span>)}
+              {selectedCardId && hasRevealed && (<span className="text-amber-200 font-semibold">{activePlayerName}</span>)}
+            </p>
+          </div>
           
-          {selectedCardId ? renderSelectedCard() : renderThreeCards()}
+          <div className="w-full flex-grow flex items-center justify-center">
+            {selectedCardId ? renderSelectedCard() : renderThreeCards()}
+          </div>
 
-          <div className="h-24 flex items-center justify-center">
+          <div className="h-24 flex items-center justify-center w-full mt-2">
             {hasRevealed && minigameState.actionApplied && isMyTurn && (
-              <button onClick={() => {
-                triggerHaptic('LIGHT');
-                endMinigame();
-              }} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 text-lg animate-fade-in relative z-20">
+              <button 
+                onClick={() => {
+                  triggerHaptic('LIGHT');
+                  endMinigame();
+                }} 
+                className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-black uppercase tracking-widest py-4 px-10 rounded-full shadow-[0_10px_25px_rgba(16,185,129,0.4)] transition-all transform active:scale-95 text-lg animate-fade-in relative z-20 border border-emerald-300/40"
+              >
                 {t('minigameContinueButton')}
               </button>
             )}
@@ -179,7 +242,11 @@ const CardDrawScreen: React.FC = () => {
         </div>
       </div>
       {isPlayerSelectionModalOpen && isMyTurn && revealedOutcome?.playerChoicePromptKey && (
-        <PlayerSelectionModal prompt={t(revealedOutcome.playerChoicePromptKey)} onClose={() => setPlayerSelectionModalOpen(false)} onPlayerSelected={() => setPlayerSelectionModalOpen(false)} />
+        <PlayerSelectionModal 
+          prompt={t(revealedOutcome.playerChoicePromptKey)} 
+          onClose={() => setPlayerSelectionModalOpen(false)} 
+          onPlayerSelected={() => setPlayerSelectionModalOpen(false)} 
+        />
       )}
     </>
   );

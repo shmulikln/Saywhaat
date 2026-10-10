@@ -17,16 +17,16 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, c
         <p className="text-slate-200 mb-8">
           {message}
         </p>
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 bg-slate-600/80 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-md transition-transform transform hover:scale-105"
+              className="flex-1 bg-white/10 hover:bg-white/20 text-white font-black uppercase tracking-wider py-3.5 px-6 rounded-full border border-white/20 active:scale-95 transition-all text-sm"
             >
               {cancelText}
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-md transition-transform transform hover:scale-105"
+              className="flex-1 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#4c1d95] font-black uppercase tracking-wider py-3.5 px-6 rounded-full shadow-[0_4px_20px_rgba(251,191,36,0.35)] active:scale-95 transition-all text-sm"
             >
               {confirmText}
             </button>

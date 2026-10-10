@@ -1,21 +1,26 @@
 {
   "hosting": {
-    "public": "public",
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "/.well-known/assetlinks.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    ],
     "rewrites": [
       {
-        "source": "/.well-known/**",
-        "destination": "/.well-known/**"
-      },
-      {
-        "source": "/join/**",
-        "destination": "/index.html" 
-      },
-      {
         "source": "**",
-        "run": {
-          "serviceId": "say-whaaat-charades-game",
-          "region": "us-west1"
-        }
+        "destination": "/index.html"
       }
     ]
   }

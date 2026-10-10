@@ -86,7 +86,7 @@ const JoinGameChecklistModal: React.FC = () => {
                 <div className="mt-6 pt-4 border-t border-white/20">
                     <button 
                         onClick={resetJoinChecklist}
-                        className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                        className="w-full h-12 bg-[#FBBF24] hover:bg-[#F59E0B] text-[#4c1d95] font-black uppercase tracking-wider text-sm rounded-full shadow-[0_4px_20px_rgba(251,191,36,0.35)] active:scale-95 transition-all flex items-center justify-center"
                     >
                         {t('tryAgainButton')}
                     </button>

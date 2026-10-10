@@ -1,29 +1,150 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameSessionContext';
 import { useTranslations } from '../contexts/TranslationsContext';
 import TimerDisplay from './TimerDisplay';
-import PlayerChip from './PlayerChip';
 import { PlayerWithId, Language, TurnChaosType, GameState } from '../types';
 import { TURN_DURATION_SECONDS } from '../constants';
 import AppHeader from './AppHeader';
 import { triggerHaptic } from '../utils/nativeUtils';
+import { 
+  start10SecCountdownSound, 
+  stop10SecCountdownSound, 
+  playTurnEndedSound, 
+  playSuccessSound, 
+  playSkipSound 
+} from '../utils/soundUtils';
+
+interface AutoFitWordProps {
+  word: string;
+  language: Language;
+}
+
+const splitIntoLines = (text: string): string[] => {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= 1) return [text];
+  if (words.length === 2) return [words[0], words[1]];
+  if (words.length === 3) {
+    if (words[1].length <= 3) {
+      return [`${words[0]} ${words[1]}`, words[2]];
+    }
+    const opt1Max = Math.max(words[0].length + 1 + words[1].length, words[2].length);
+    const opt2Max = Math.max(words[0].length, words[1].length + 1 + words[2].length);
+    return opt1Max <= opt2Max ? [`${words[0]} ${words[1]}`, words[2]] : [words[0], `${words[1]} ${words[2]}`];
+  }
+  const mid = Math.ceil(words.length / 2);
+  return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+};
+
+const AutoFitWord: React.FC<AutoFitWordProps> = ({ word, language }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = useState<number>(72);
+
+  const fontClass = language === Language.HE ? 'font-secular-one' : 'font-outfit';
+  const lines = splitIntoLines(word);
+
+  useLayoutEffect(() => {
+    const calculateSize = () => {
+      if (!containerRef.current || !measureRef.current) return;
+      const containerWidth = containerRef.current.clientWidth;
+      const measuredWidth = measureRef.current.offsetWidth;
+
+      if (containerWidth > 0 && measuredWidth > 0) {
+        // Leave 8% margin for safety against any font-rendering or subpixel overflow
+        const availableWidth = containerWidth * 0.92;
+        // Text is measured at 100px font-size
+        const widthBasedSize = Math.floor((availableWidth / measuredWidth) * 100);
+
+        // Height constraint so multi-line text doesn't overflow vertically
+        const maxHeightBasedSize = lines.length === 1 ? 135 : lines.length === 2 ? 92 : 68;
+
+        const ideal = Math.min(widthBasedSize, maxHeightBasedSize);
+        const clamped = Math.max(28, ideal);
+        setFontSize(clamped);
+      }
+    };
+
+    calculateSize();
+    window.addEventListener('resize', calculateSize);
+    return () => window.removeEventListener('resize', calculateSize);
+  }, [word, language]);
+
+  return (
+    <div ref={containerRef} className="w-full max-w-full overflow-hidden flex items-center justify-center relative py-2">
+      {/* Hidden off-screen probe at exactly 100px to measure the widest line */}
+      <div
+        ref={measureRef}
+        aria-hidden="true"
+        className={`absolute opacity-0 pointer-events-none uppercase font-black text-[100px] leading-none ${fontClass}`}
+        style={{ visibility: 'hidden', top: -9999, left: -9999 }}
+      >
+        {lines.map((line, idx) => (
+          <div key={idx} className="whitespace-nowrap">
+            {line}
+          </div>
+        ))}
+      </div>
+
+      {/* Visible word: multi-line supported on word boundaries, font size maximized */}
+      <div
+        key={word}
+        className={`animate-word-quick flex flex-col items-center justify-center font-black uppercase select-none tracking-tight leading-[1.05] ${fontClass}`}
+        style={{ fontSize: `${fontSize}px` }}
+      >
+        {lines.map((line, idx) => (
+          <span key={idx} className="whitespace-nowrap text-center">
+            {line}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const TurnScreen: React.FC = () => {
-  const { gameSession, advanceTurn, handleGuessedWord, handleSkipWord, localPlayerId } = useGame();
-  const { t } = useTranslations();
+  const { gameSession, endTurn, handleGuessedWord, handleSkipWord, localPlayerId } = useGame();
+  const { t, language } = useTranslations();
+  const fontClass = language === Language.HE ? 'font-secular-one' : 'font-outfit';
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   
   const isLocalGame = gameSession?.gameMode === 'local';
+  const isDuoMode = gameSession?.playMode === 'duo';
   const turnChaos = gameSession?.activeTurnChaos;
-  const turnDuration = turnChaos?.type === TurnChaosType.SHORT_TURN && turnChaos.value ? turnChaos.value : TURN_DURATION_SECONDS;
+  const turnDuration = isDuoMode ? 30 : (turnChaos?.type === TurnChaosType.SHORT_TURN && turnChaos.value ? turnChaos.value : TURN_DURATION_SECONDS);
 
   const [isReadyForTurn, setIsReadyForTurn] = useState(!isLocalGame);
   const [timeLeft, setTimeLeft] = useState(turnDuration);
-  const [guessNotification, setGuessNotification] = useState<{ word: string; guesserName: string } | null>(null);
+  const [guessNotification, setGuessNotification] = useState<{ id: string; word: string; guesserName: string; points?: number } | null>(null);
+  const [pointDeltaBadge, setPointDeltaBadge] = useState<{ id: string; delta: '+1' | '-1' } | null>(null);
+  const lastProcessedGuessIdRef = useRef<string | null>(gameSession?.lastGuessEvent?.id || null);
   const prevGameSessionRef = useRef(gameSession);
+  const isPlayingCountdownRef = useRef(false);
+
+  const triggerPointBadge = useCallback((delta: '+1' | '-1') => {
+    setPointDeltaBadge({
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      delta,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!pointDeltaBadge) return;
+    const timer = setTimeout(() => {
+      setPointDeltaBadge(null);
+    }, 1250);
+    return () => clearTimeout(timer);
+  }, [pointDeltaBadge]);
+
+  useEffect(() => {
+    if (!guessNotification) return;
+    const timer = setTimeout(() => {
+      setGuessNotification(null);
+    }, 3400);
+    return () => clearTimeout(timer);
+  }, [guessNotification]);
 
   useEffect(() => {
     if (!gameSession) { navigate('/'); return; }
@@ -40,49 +161,111 @@ const TurnScreen: React.FC = () => {
   
   useEffect(() => {
     if (!isReadyForTurn) return;
+
     if (gameSession?.turnStartTime) {
       const timerId = setInterval(() => {
           const elapsed = Math.floor((Date.now() - gameSession.turnStartTime!) / 1000);
           const newTimeLeft = turnDuration - elapsed;
           if (newTimeLeft <= 0) {
             setTimeLeft(0);
+            stop10SecCountdownSound();
+            isPlayingCountdownRef.current = false;
+            playTurnEndedSound();
             if (isLocalGame || localPlayerId === gameSession.currentTurnPlayerId) {
-                advanceTurn();
+                endTurn();
             }
             clearInterval(timerId);
           } else {
             setTimeLeft(newTimeLeft);
+            if (newTimeLeft <= 10) {
+              if (!isPlayingCountdownRef.current) {
+                isPlayingCountdownRef.current = true;
+                start10SecCountdownSound();
+              }
+              if (newTimeLeft <= 5) {
+                triggerHaptic('LIGHT');
+              }
+            }
           }
       }, 1000);
       return () => clearInterval(timerId);
     }
-  }, [gameSession?.turnStartTime, advanceTurn, turnDuration, localPlayerId, gameSession?.currentTurnPlayerId, isReadyForTurn, isLocalGame]);
+  }, [gameSession?.turnStartTime, endTurn, turnDuration, localPlayerId, gameSession?.currentTurnPlayerId, isReadyForTurn, isLocalGame]);
+
+  useEffect(() => {
+    return () => {
+      stop10SecCountdownSound();
+      isPlayingCountdownRef.current = false;
+    };
+  }, []);
   
   useEffect(() => {
-    const prevSession = prevGameSessionRef.current;
-    if (prevSession?.gameState === GameState.TURN_ACTIVE && prevSession.currentWord && gameSession) {
+    if (!gameSession) return;
+
+    // 1. Direct event sync from GameSession (works in both FFA and Team modes across all devices)
+    if (gameSession.lastGuessEvent && gameSession.lastGuessEvent.id !== lastProcessedGuessIdRef.current) {
+      lastProcessedGuessIdRef.current = gameSession.lastGuessEvent.id;
+      // Only show if the event was created recently (within last 6 seconds) to avoid replaying old events
+      if (Date.now() - gameSession.lastGuessEvent.timestamp < 6000) {
+        setGuessNotification({
+          id: gameSession.lastGuessEvent.id,
+          word: gameSession.lastGuessEvent.word,
+          guesserName: gameSession.lastGuessEvent.guesserName,
+          points: gameSession.lastGuessEvent.points,
+        });
+        triggerHaptic('SUCCESS');
+        playSuccessSound();
+      }
+    } else {
+      // 2. Fallback detection based on score increase
+      const prevSession = prevGameSessionRef.current;
+      if (prevSession?.gameState === GameState.TURN_ACTIVE && prevSession.currentWord && gameSession.gameState === GameState.TURN_ACTIVE) {
         let wasGuessed = false;
-        let guesserId: string | null = null;
-        const explainerId = prevSession.currentTurnPlayerId;
-        for (const playerId in gameSession.players) {
+        let guesserName = '';
+        let points = 1;
+
+        if (gameSession.playMode === 'teams' && gameSession.teams && prevSession.teams) {
+          const activeTeamId = gameSession.activeTeamId || 'team1';
+          const oldScore = prevSession.teams[activeTeamId]?.score || 0;
+          const newScore = gameSession.teams[activeTeamId]?.score || 0;
+          if (newScore > oldScore) {
+            wasGuessed = true;
+            guesserName = gameSession.teams[activeTeamId]?.name || (activeTeamId === 'team1' ? t('defaultTeam1Name') : t('defaultTeam2Name'));
+            points = newScore - oldScore;
+          }
+        } else {
+          const explainerId = prevSession.currentTurnPlayerId;
+          for (const playerId in gameSession.players) {
             if (playerId === explainerId) continue;
             const oldPlayer = prevSession.players[playerId];
             const newPlayer = gameSession.players[playerId];
             if (oldPlayer && newPlayer && newPlayer.score > oldPlayer.score) {
-                wasGuessed = true;
-                guesserId = playerId;
-                break;
+              wasGuessed = true;
+              guesserName = newPlayer.name;
+              points = newPlayer.score - oldPlayer.score;
+              break;
             }
+          }
         }
-        if (wasGuessed && guesserId) {
-            const guesser = gameSession.players[guesserId];
-            setGuessNotification({ word: prevSession.currentWord, guesserName: guesser.name });
+
+        if (wasGuessed && guesserName) {
+          const fallbackId = `${Date.now()}_${guesserName}`;
+          if (fallbackId !== lastProcessedGuessIdRef.current) {
+            lastProcessedGuessIdRef.current = fallbackId;
+            setGuessNotification({
+              id: fallbackId,
+              word: prevSession.currentWord,
+              guesserName,
+              points,
+            });
             triggerHaptic('SUCCESS');
-            setTimeout(() => setGuessNotification(null), 4000);
+            playSuccessSound();
+          }
         }
+      }
     }
     prevGameSessionRef.current = gameSession;
-  }, [gameSession]);
+  }, [gameSession, t]);
   
   if (!gameSession) {
     return <div className="flex items-center justify-center min-h-screen p-4"><div className="text-xl text-slate-100">{t('getReady')}...</div></div>;
@@ -93,7 +276,6 @@ const TurnScreen: React.FC = () => {
   const isExplainerView = isLocalGame || isMyTurnExplainer;
   const playersArray: PlayerWithId[] = Object.entries(gameSession.players).map(([id, player]) => ({ id, ...player }));
   const potentialGuessers = playersArray.filter(p => p.id !== gameSession.currentTurnPlayerId);
-  const leadingScore = playersArray.reduce((max, p) => p.score > max ? p.score : max, 0);
   const isLowTime = timeLeft <= 10 && timeLeft > 0;
 
   const renderChaosOverlay = () => {
@@ -131,16 +313,37 @@ const TurnScreen: React.FC = () => {
     }
   };
 
+  const isTeamsMode = gameSession.playMode === 'teams';
+  const activeTeamId = gameSession.activeTeamId || 'team1';
+  const activeTeam = gameSession.teams ? gameSession.teams[activeTeamId] : undefined;
+  const activeTeamName = activeTeam?.name || (activeTeamId === 'team1' ? t('defaultTeam1Name') : t('defaultTeam2Name'));
+
+  const handleGuessed = (guesserId?: string) => {
+    triggerPointBadge('+1');
+    playSuccessSound();
+    handleGuessedWord(guesserId);
+  };
+
   const handleSkip = () => {
+    triggerPointBadge('-1');
     triggerHaptic('WARNING');
+    playSkipSound();
     handleSkipWord();
   };
 
+  const handleEndTurnEarly = () => {
+    stop10SecCountdownSound();
+    isPlayingCountdownRef.current = false;
+    playTurnEndedSound();
+    endTurn();
+  };
+
   if (isLocalGame && !isReadyForTurn) {
+    const readyName = isTeamsMode ? activeTeamName : (explainer?.name || '...');
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-safe-top text-center">
         <div className="w-full max-w-md bg-white/10 backdrop-blur-md p-8 rounded-xl shadow-2xl text-white animate-fade-in">
-          <h2 className="text-3xl font-bold mb-4">{t('readyScreenTitle', { playerName: explainer?.name || '...' })}</h2>
+          <h2 className="text-3xl font-bold mb-4">{t('readyScreenTitle', { playerName: readyName })}</h2>
           <p className="text-lg mb-8">{t('readyScreenMessage')}</p>
           <button 
             onClick={() => {
@@ -157,88 +360,228 @@ const TurnScreen: React.FC = () => {
   }
 
   if (!isExplainerView) {
+    const explainerName = isTeamsMode ? (activeTeamName || 'Team') : (explainer?.name || '...');
+    const template = t('isExplaining', { playerName: '||NAME||' });
+    const nameParts = template.includes('||NAME||') ? template.split('||NAME||') : null;
+
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 pt-8 sm:pt-12 text-white relative">
-        {isLowTime && <div className="absolute inset-0 bg-red-600/20 animate-pulse z-30 pointer-events-none"></div>}
-        {renderChaosOverlay()}
+      <>
+        <div className="min-h-[100dvh] flex flex-col items-center justify-between p-4 pt-safe-top pb-safe-bottom text-white relative overflow-hidden select-none">
+          {isLowTime && <div className="absolute inset-0 bg-red-600/20 animate-pulse z-30 pointer-events-none"></div>}
+          {renderChaosOverlay()}
+
+          {/* Logo on top of the page with status bar margins */}
+          <div className="w-full flex justify-center z-10">
+            <AppHeader />
+          </div>
+
+          {/* Vertically centered content: Title then Timer in a container */}
+          <div className="flex-1 w-full max-w-md flex flex-col items-center justify-center text-center z-10 px-4 my-auto">
+            <h1 className={`text-3xl sm:text-4xl font-black text-white mb-8 tracking-wide drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] leading-tight ${fontClass}`}>
+              {nameParts ? (
+                <>
+                  <span>{nameParts[0]}</span>
+                  <span className="text-[#FBBF24] drop-shadow-[0_2px_10px_rgba(251,191,36,0.5)]">
+                    {explainerName}
+                  </span>
+                  <span>{nameParts[1]}</span>
+                </>
+              ) : (
+                t('isExplaining', { playerName: explainerName })
+              )}
+            </h1>
+
+            {/* Dedicated Timer Container */}
+            <div className="w-full bg-white/10 backdrop-blur-md p-5 sm:p-6 rounded-3xl border border-white/15 shadow-2xl flex flex-col items-center justify-center">
+              <TimerDisplay timeLeft={timeLeft} duration={turnDuration} />
+            </div>
+          </div>
+
+          {/* Optical balance spacer for top header */}
+          <div className="w-full h-12 opacity-0 pointer-events-none" aria-hidden="true" />
+        </div>
+
+        {/* Floating Celebratory Guess Badge Notification */}
         {guessNotification && (
-          <div key={guessNotification.word} className="fixed bottom-6 left-1/2 -translate-x-1/2 w-auto max-w-[calc(100vw-2rem)] sm:max-w-md bg-slate-800/95 backdrop-blur-sm text-white py-3 px-5 rounded-lg shadow-2xl z-50 flex items-center gap-4 animate-snackbar" role="status">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-base font-medium">
-              <span className="font-bold">{guessNotification.guesserName}</span>
-              <span> guessed "</span><span className="font-bold text-yellow-300">{guessNotification.word}</span><span>" (+1 {t('pointsSuffix')})</span>
-            </p>
+          <div 
+            key={guessNotification.id} 
+            className="fixed bottom-10 sm:bottom-14 left-1/2 -translate-x-1/2 z-50 pointer-events-none w-max max-w-[92vw] sm:max-w-md px-2 flex justify-center pb-safe-bottom" 
+            role="status"
+          >
+            <div className="animate-badge-pop bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-600 text-white py-3 px-5 sm:px-6 rounded-full shadow-[0_12px_36px_rgba(16,185,129,0.55),0_0_0_2px_rgba(255,255,255,0.25)] border-2 border-emerald-300 flex items-center gap-2.5 sm:gap-3 backdrop-blur-md">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/25 flex items-center justify-center text-white shrink-0 shadow-[inset_0_1px_3px_rgba(255,255,255,0.6)]">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white filter drop-shadow" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-base font-bold whitespace-nowrap overflow-hidden">
+                <span className="text-white drop-shadow-sm font-extrabold truncate max-w-[110px] sm:max-w-[150px]">{guessNotification.guesserName}</span>
+                <span className="text-emerald-100 font-medium shrink-0">{language === Language.HE ? 'ניחש/ה' : (language === Language.AR ? 'خمّن' : (language === Language.PT ? 'acertou' : 'guessed'))}</span>
+                <span className="text-amber-300 font-black tracking-wide drop-shadow-md truncate max-w-[110px] sm:max-w-[160px]">"{guessNotification.word}"</span>
+                <span className="bg-amber-400 text-purple-950 text-[10px] sm:text-xs font-black px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm shrink-0">
+                  +{guessNotification.points || 1} {t('pointsSuffix')}
+                </span>
+              </div>
+            </div>
           </div>
         )}
-        <AppHeader />
-        <div className="w-full max-lg bg-white/10 backdrop-blur-md p-6 sm:p-8 rounded-xl shadow-2xl text-center relative z-10">
-            <h2 className="text-2xl font-semibold mb-4 text-slate-200">{t('guessingScreenTitle')}</h2>
-            <p className="text-3xl font-bold mb-8 text-yellow-300">{t('isExplaining', { playerName: explainer?.name || '...' })}</p>
-            <TimerDisplay timeLeft={timeLeft} duration={turnDuration} />
-        </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-between p-4 pt-4 sm:pt-6 relative ${turnChaos ? 'animate-chaos-cut' : ''}`}>
-      {isLowTime && <div className="absolute inset-0 bg-red-600/20 animate-pulse z-30 pointer-events-none"></div>}
-      {renderChaosOverlay()}
-      {turnChaos && <div className="absolute top-0 inset-x-0 bg-purple-600 text-white p-2 text-center text-sm shadow-lg z-20 animate-hard-cut"><strong className="font-bold uppercase tracking-widest">Chaos:</strong> {t(turnChaos.descriptionKey)}</div>}
-      
-      <header className="w-full max-w-2xl flex justify-between items-center p-4 bg-white/10 backdrop-blur-md rounded-lg shadow-lg text-white relative z-10">
-        <div className="overflow-hidden">
-          <h2 className="text-xl font-bold truncate">{(explainer?.name || t('player'))}</h2>
-          <p className="text-xs font-bold opacity-60 uppercase tracking-widest">{t('yourScore')}: {explainer?.score} {t('pointsSuffix')}</p>
-        </div>
-        <TimerDisplay timeLeft={timeLeft} duration={turnDuration} />
-      </header>
-
-      <main className="flex-grow flex flex-col items-center justify-center w-full max-w-2xl my-4 relative z-10">
-        <div className="p-8 sm:p-12 text-center text-white w-full min-h-[220px] flex flex-col items-center justify-center">
-            {gameSession.currentWord ? (
-              <div className="text-center overflow-hidden">
-                <p className="text-xs font-bold uppercase tracking-[0.4em] mb-4 text-white/40">{t('word')}</p>
-                <p 
-                  key={gameSession.currentWord}
-                  className={`text-4xl sm:text-7xl font-black break-words uppercase ${gameSession.language === Language.HE ? 'font-secular-one' : 'font-outfit'}`} 
-                  style={{ textShadow: '0px 10px 30px rgba(0,0,0,0.5)' }}
-                >
-                  {gameSession.currentWord}
-                </p>
+    <>
+      <div className="min-h-screen flex flex-col items-center justify-between p-4 pt-safe-top relative">
+        {isLowTime && <div className="absolute inset-0 bg-red-600/20 animate-pulse z-30 pointer-events-none"></div>}
+        {renderChaosOverlay()}
+        {turnChaos && turnChaos.descriptionKey && (
+          <div className="w-full max-w-2xl bg-purple-600 text-white p-2.5 rounded-2xl text-center text-sm shadow-lg mb-2 z-20 animate-hard-cut border border-purple-400/30">
+            <strong className="font-bold uppercase tracking-widest">Chaos:</strong> {t(turnChaos.descriptionKey)}
+          </div>
+        )}
+        
+        <header className="w-full max-w-2xl p-4 sm:p-5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 shadow-lg text-white relative z-10">
+          <TimerDisplay 
+            timeLeft={timeLeft} 
+            duration={turnDuration} 
+          />
+          {isTeamsMode && activeTeam ? (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10 px-2">
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${activeTeamId === 'team1' ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'}`}></span>
+                <span className="font-black text-sm uppercase tracking-wider">{activeTeamName}</span>
               </div>
-            ) : (
-              <p className="text-2xl font-bold uppercase tracking-widest">{t('noWordsLeft')}</p>
-            )}
-        </div>
-      </main>
-
-      <section className="w-full max-w-2xl my-4 text-center px-4 relative z-10">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-white/40">{t('selectGuesserTitle')}</h3>
-        <div className="flex flex-wrap justify-center gap-2">
-          {potentialGuessers.map(player => (
-            <button key={player.id} onClick={() => handleGuessedWord(player.id)} disabled={!gameSession.currentWord} className="flex items-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-full border border-white/10 transition-all active:scale-95 text-white disabled:opacity-30 disabled:pointer-events-none shadow-lg">
-              <span className="font-bold text-sm tracking-tight">{player.name}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <footer className="w-full max-w-2xl p-4 bg-white/10 backdrop-blur-md rounded-[30px] border border-white/10 shadow-lg mt-2 relative z-10">
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleSkip} disabled={!gameSession.currentWord} className="h-14 bg-[#FBBF24] text-[#4c1d95] font-black uppercase tracking-widest rounded-full shadow-md active:scale-95 disabled:opacity-50 transition-all">{t('skipButton')}</button>
-          <button onClick={advanceTurn} className="h-14 border-2 border-red-500 text-red-500 font-black uppercase tracking-widest rounded-full shadow-md active:scale-95 transition-all">{t('endTurnEarlyButton')}</button>
-        </div>
-        <div className="mt-6 flex flex-col items-center">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3 text-white/30">{t('currentPlayers')}</h3>
-            <div className="flex flex-wrap justify-center gap-2">
-                {playersArray.map(p => (<PlayerChip key={p.id} player={p} isCurrent={p.id === gameSession.currentTurnPlayerId} isHost={!!p.isHost} isLeading={p.score === leadingScore && leadingScore > 0} compact={true} />))}
+              <div className="flex items-center gap-2">
+                {pointDeltaBadge && (
+                  <span
+                    key={pointDeltaBadge.id}
+                    className={`animate-score-pop font-black text-xs sm:text-sm px-2.5 py-0.5 rounded-full shadow-md ${
+                      pointDeltaBadge.delta === '+1'
+                        ? 'bg-emerald-500 text-white border border-emerald-300'
+                        : 'bg-red-600 text-white border border-red-300'
+                    }`}
+                  >
+                    {pointDeltaBadge.delta}
+                  </span>
+                )}
+                <span className="font-mono font-black text-base text-[#FBBF24]">
+                  {activeTeam.score} / {gameSession.winningScore} {t('pointsSuffix')}
+                </span>
+              </div>
             </div>
-        </div>
-      </footer>
-    </div>
+          ) : isDuoMode ? (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10 px-2">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+                <span className="font-black text-sm uppercase tracking-wider">{explainer?.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {pointDeltaBadge && (
+                  <span
+                    key={pointDeltaBadge.id}
+                    className={`animate-score-pop font-black text-xs sm:text-sm px-2.5 py-0.5 rounded-full shadow-md ${
+                      pointDeltaBadge.delta === '+1'
+                        ? 'bg-emerald-500 text-white border border-emerald-300'
+                        : 'bg-red-600 text-white border border-red-300'
+                    }`}
+                  >
+                    {pointDeltaBadge.delta}
+                  </span>
+                )}
+                <span className="font-mono font-black text-base text-[#FBBF24]">
+                  {gameSession.duoScore || 0} / {gameSession.winningScore} {t('pointsSuffix')}
+                </span>
+              </div>
+            </div>
+          ) : (
+            explainer && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10 px-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-[#FBBF24] shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
+                  <span className="font-black text-sm uppercase tracking-wider">{explainer.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {pointDeltaBadge && (
+                    <span
+                      key={pointDeltaBadge.id}
+                      className={`animate-score-pop font-black text-xs sm:text-sm px-2.5 py-0.5 rounded-full shadow-md ${
+                        pointDeltaBadge.delta === '+1'
+                          ? 'bg-emerald-500 text-white border border-emerald-300'
+                          : 'bg-red-600 text-white border border-red-300'
+                      }`}
+                    >
+                      {pointDeltaBadge.delta}
+                    </span>
+                  )}
+                  <span className="font-mono font-black text-base text-[#FBBF24]">
+                    {explainer.score || 0} / {gameSession.winningScore} {t('pointsSuffix')}
+                  </span>
+                </div>
+              </div>
+            )
+          )}
+        </header>
+
+        <main className="flex-grow flex flex-col items-center justify-center w-full max-w-2xl my-2 sm:my-4 relative z-10">
+          <div className="p-2 sm:p-4 text-center text-white w-full min-h-[220px] sm:min-h-[260px] flex flex-col items-center justify-center">
+              {gameSession.currentWord ? (
+                <div className="text-center w-full max-w-full">
+                  <p className="text-xs sm:text-sm font-black uppercase tracking-[0.3em] mb-2 sm:mb-3 text-white/40">{t('word')}</p>
+                  <AutoFitWord word={gameSession.currentWord} language={gameSession.language} />
+                </div>
+              ) : (
+                <p className="text-2xl font-bold uppercase tracking-widest">{t('noWordsLeft')}</p>
+              )}
+          </div>
+        </main>
+
+        {isTeamsMode || isDuoMode ? (
+          <section className="w-full max-w-2xl my-2 mb-8 sm:mb-12 text-center px-4 relative z-10 flex flex-col items-center">
+            <button 
+              onClick={() => handleGuessed()} 
+              disabled={!gameSession.currentWord} 
+              className="w-full max-w-md h-20 sm:h-24 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 active:scale-95 text-white font-black text-2xl sm:text-3xl uppercase tracking-wider rounded-full shadow-[0_8px_30px_rgba(16,185,129,0.45)] border-2 border-emerald-300/40 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <span>{t('guessedButton')}</span>
+            </button>
+          </section>
+        ) : (
+          <section className="w-full max-w-2xl my-2 mb-8 sm:mb-12 text-center px-4 relative z-10">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.25em] mb-3 sm:mb-4 text-white/50">{t('selectGuesserTitle')}</h3>
+            <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+              {potentialGuessers.map(player => (
+                <button 
+                  key={player.id} 
+                  onClick={() => handleGuessed(player.id)} 
+                  disabled={!gameSession.currentWord} 
+                  className="flex items-center justify-center bg-white/15 hover:bg-white/25 active:bg-white/30 backdrop-blur-md px-7 py-3.5 sm:px-8 sm:py-4 rounded-full border-2 border-white/20 hover:border-white/40 transition-all active:scale-95 text-white disabled:opacity-30 disabled:pointer-events-none shadow-xl"
+                >
+                  <span className="font-black text-xl sm:text-2xl tracking-tight drop-shadow-sm">{player.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <footer className="w-full max-w-2xl p-4 bg-white/10 backdrop-blur-md rounded-[28px] border border-white/10 shadow-xl mt-6 sm:mt-8 mb-3 relative z-10">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <button 
+              onClick={handleEndTurnEarly} 
+              className="h-14 sm:h-16 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-black uppercase tracking-wider text-sm sm:text-base rounded-full shadow-[0_4px_20px_rgba(220,38,38,0.45)] border border-red-400/30 active:scale-95 transition-all flex items-center justify-center px-4"
+            >
+              {t('endTurnEarlyButton')}
+            </button>
+            <button 
+              onClick={handleSkip} 
+              disabled={!gameSession.currentWord} 
+              className="h-14 sm:h-16 bg-[#FBBF24] hover:bg-[#f59e0b] active:bg-[#d97706] text-[#3b0764] font-black uppercase tracking-wider text-sm sm:text-base rounded-full shadow-[0_4px_20px_rgba(251,191,36,0.35)] active:scale-95 disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center justify-center px-4"
+            >
+              {t('skipButton')}
+            </button>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 };
 

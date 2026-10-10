@@ -16,25 +16,24 @@ const PlayerChip: React.FC<PlayerChipProps> = ({ player, isCurrent, isHost, isLe
   
   const displayName = `${player.name}${player.chaosNickname ? ` ${player.chaosNickname}` : ''}`;
 
-  const baseClasses = "flex items-center justify-between p-3 rounded-lg shadow-md transition-all duration-300";
+  const baseClasses = "flex items-center justify-between p-3.5 px-5 rounded-2xl shadow-md transition-all duration-300";
   
-  const compactBase = "flex items-center justify-between rounded-lg shadow-sm transition-all duration-300 text-xs px-2 py-1 w-auto";
-  const compactCurrent = "bg-purple-500/80 text-white";
-  const compactDefault = "bg-white/10 text-slate-200";
+  const compactBase = "flex items-center justify-between rounded-full shadow-sm transition-all duration-300 text-xs px-3 py-1.5 w-auto";
+  const compactCurrent = "bg-purple-600/90 text-white border border-purple-400/40 shadow-sm";
+  const compactDefault = "bg-white/10 text-white/90 border border-white/10";
   
-  const fullBase = "min-h-[60px] p-3";
-  const fullCurrent = "bg-purple-600/80 text-white ring-2 ring-white/80";
-  const fullDefault = "bg-white/10 backdrop-blur-sm text-white border border-white/5";
-  const leadingClasses = isLeading ? "ring-2 ring-yellow-400/80" : "ring-1 ring-white/20";
-
+  const fullBase = "min-h-[60px] p-3.5 px-5";
+  const fullCurrent = "bg-purple-600/70 text-white ring-2 ring-[#FBBF24]/80 shadow-[0_4px_20px_rgba(251,191,36,0.2)] backdrop-blur-md";
+  const fullDefault = "bg-white/10 backdrop-blur-md text-white border border-white/10 hover:bg-white/15";
+  const leadingClasses = isLeading ? "ring-2 ring-[#FBBF24] shadow-[0_0_15px_rgba(251,191,36,0.3)]" : "";
 
   if (compact) {
     return (
        <div className={`${compactBase} ${isCurrent ? compactCurrent : compactDefault}`}>
-        <span className="font-semibold truncate max-w-[150px] ltr:text-left rtl:text-right">
+        <span className="font-bold truncate max-w-[150px] ltr:text-left rtl:text-right">
           {isLeading && '⭐ '}{displayName}
         </span>
-        <span className={`ms-2 ${isCurrent ? 'bg-yellow-300 text-purple-700' : 'bg-yellow-400 text-gray-800'} text-xs font-bold px-2 py-0.5 rounded-full`}>{player.score}</span>
+        <span className="ms-2 bg-[#FBBF24] text-[#4c1d95] text-xs font-black px-2 py-0.5 rounded-full">{player.score}</span>
       </div>
     );
   }

@@ -151,6 +151,9 @@ export interface AppTranslations {
   chaosModeTooltip: string;
   chaosModeInfoTitle: string;
   chaosModeInfoDescription: string;
+  chaosModeNeverKnow: string;
+  chaosModeGotIt: string;
+  chaosRequiresThreePlayers: string;
   chaosEventNicknames: string;
   chaosEventStarted: string;
   chaosEventMinigame: string;
@@ -187,6 +190,14 @@ export interface AppTranslations {
   cardOutcomeLoseHalfPoints: string;
   cardOutcomeGivePoints: string;
   minigamePlayerChoiceGivePoints: string;
+  cardOutcomeRobinHood: string;
+  cardOutcomeUnderdogSurge: string;
+  cardOutcomeTaxCollector: string;
+  cardOutcomeTheEqualizer: string;
+  cardOutcomeDoubleOrNothing: string;
+  cardOutcomeRussianRoulette: string;
+  minigamePlayerChoiceRoulette: string;
+  cardOutcomeMysteryBox: string;
 
   // Confirmation Modal
   confirmStartGameLowPlayersTitle: string;
@@ -204,6 +215,80 @@ export interface AppTranslations {
   readyScreenTitle: string;
   readyScreenMessage: string;
   showWordButton: string;
+  howDoYouWantToPlay: string;
+  multipleDevicesLabel: string;
+  oneDeviceLabel: string;
+  multipleDevicesTip: string;
+  oneDeviceTip: string;
+
+  // Turn Summary
+  turnSummaryTitle: string;
+  wordsGuessed: string;
+  wordsSkipped: string;
+  noWordsAttempted: string;
+  roundScores: string;
+  nextTurnButton: string;
+  guessedBy: string;
+
+  // Game Mode (Teams vs Free For All vs Duo)
+  gameModeLabel: string;
+  teamsMode: string;
+  freeForAllMode: string;
+  team1NameLabel: string;
+  team2NameLabel: string;
+  defaultTeam1Name: string;
+  defaultTeam2Name: string;
+  chooseTeamLabel: string;
+  teamGuessedButton: string;
+  teamWinsTitle: string;
+  teamScoreLabel: string;
+  minPlayersPerTeam: string;
+  selectYourTeam: string;
+  switchTeamButton: string;
+  joinTeamButton: string;
+
+  // Co-op Duo Mode
+  duoMode?: string;
+  duoModeDesc?: string;
+  duoScoreLabel?: string;
+  duoRoundLabel?: string;
+  duoVictory?: string;
+  duoChallengeOver?: string;
+  duoGoodEffort?: string;
+  duoRoundsSettingLabel?: string;
+  challengeWon?: string;
+  yourTurnToExplain?: string;
+  yourTeamTurn?: string;
+  otherTeamTurn?: string;
+  specialRuleActive?: string;
+  itsATie?: string;
+  noWinners?: string;
+  waitingForHostRematch?: string;
+  roundsUnit?: string;
+  singleRoundUnit?: string;
+  defaultRoundIndicator?: string;
+
+  // Game Rules & Scoring Modal
+  gameRulesAndScoring?: string;
+  rulesTabObjective?: string;
+  rulesTabScoring?: string;
+  rulesDos?: string;
+  rulesDonts?: string;
+  earnPointsLabel?: string;
+  losePointsLabel?: string;
+  winningConditionLabel?: string;
+  ffaRulesSummary?: string;
+  ffaScoringGuessed?: string;
+  ffaScoringSkip?: string;
+  ffaWinningGoal?: string;
+  teamsRulesSummary?: string;
+  teamsScoringGuessed?: string;
+  teamsScoringSkip?: string;
+  teamsWinningGoal?: string;
+  duoRulesSummary?: string;
+  duoScoringGuessed?: string;
+  duoScoringSkip?: string;
+  duoWinningGoal?: string;
 }
 
 export interface LoadingStep {
@@ -217,11 +302,20 @@ export interface TurnChaosEvent {
   value?: number;
 }
 
+export interface Team {
+  id: 'team1' | 'team2';
+  name: string;
+  score: number;
+  color?: string;
+  playerIds?: string[];
+}
+
 export interface Player {
   name: string;
   score: number;
   isHost?: boolean;
   chaosNickname?: string;
+  teamId?: 'team1' | 'team2';
 }
 
 export interface PlayerWithId extends Player {
@@ -241,6 +335,13 @@ export enum MinigameCardActionType {
   RANDOMIZE_SCORES = 'RANDOMIZE_SCORES',
   LOSE_HALF_POINTS = 'LOSE_HALF_POINTS',
   GIVE_POINTS = 'GIVE_POINTS',
+  ROBIN_HOOD = 'ROBIN_HOOD',
+  UNDERDOG_SURGE = 'UNDERDOG_SURGE',
+  TAX_COLLECTOR = 'TAX_COLLECTOR',
+  THE_EQUALIZER = 'THE_EQUALIZER',
+  DOUBLE_OR_NOTHING = 'DOUBLE_OR_NOTHING',
+  RUSSIAN_ROULETTE = 'RUSSIAN_ROULETTE',
+  MYSTERY_BOX = 'MYSTERY_BOX',
 }
 
 export interface MinigameCardOutcome {
@@ -265,8 +366,32 @@ export interface MinigameState {
   actionApplied: boolean;
 }
 
+// Turn Summary Types
+export interface TurnWordResult {
+  word: string;
+  status: 'guessed' | 'skipped';
+  guesserName?: string;
+  guesserId?: string;
+}
+
+export interface GuessEvent {
+  id: string;
+  word: string;
+  guesserName: string;
+  points: number;
+  timestamp: number;
+}
+
+export interface TurnSummary {
+  explainerId: string;
+  explainerName: string;
+  words: TurnWordResult[];
+  scoresDelta: { [playerId: string]: { name: string; delta: number } };
+}
+
 export interface GameSession {
   gameId: string;
+  lastGuessEvent?: GuessEvent | null;
   hostId?: string; // Optional for local games
   players: { [playerId: string]: Player };
   playerOrder: string[];
@@ -298,6 +423,26 @@ export interface GameSession {
 
   // New property to differentiate game types
   gameMode: 'online' | 'local';
+
+  // Synchronization for ad overlay on rematch
+  showRematchAd?: boolean;
+
+  // Turn summary state
+  turnSummary?: TurnSummary | null;
+  isTurnSummaryActive?: boolean;
+
+  // Team Mode state
+  playMode?: 'ffa' | 'teams' | 'duo';
+  teams?: {
+    team1: Team;
+    team2: Team;
+  };
+  activeTeamId?: 'team1' | 'team2';
+
+  // Co-op Duo Mode state
+  duoScore?: number;
+  duoCurrentRound?: number;
+  duoTotalRounds?: number;
 }
 
 export type WinningScore = 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50;

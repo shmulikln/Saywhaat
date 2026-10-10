@@ -26,9 +26,16 @@ export const TranslationsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [language, setLanguageState] = useState<Language>(DEFAULT_LANGUAGE);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize language from localStorage safely after mount
+  // Initialize language from URL or localStorage safely after mount
   useEffect(() => {
     try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlLang = searchParams.get('lang');
+      if (urlLang && Object.values(Language).includes(urlLang as Language)) {
+        setLanguageState(urlLang as Language);
+        localStorage.setItem('saywhaaat_language', urlLang);
+        return;
+      }
       const savedLang = localStorage.getItem('saywhaaat_language');
       if (savedLang && Object.values(Language).includes(savedLang as Language)) {
         setLanguageState(savedLang as Language);

@@ -1,104 +1,105 @@
-
-import React from 'react';
-import Modal from './Modal';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from '../contexts/TranslationsContext';
-import { AppTranslations, MinigameCardActionType, MinigameCardOutcome } from '../types';
 
 interface ChaosModeInfoModalProps {
   onClose: () => void;
 }
 
-const ALL_POSSIBLE_OUTCOMES: MinigameCardOutcome[] = [
-  { action: MinigameCardActionType.BONUS_POINTS, value: 3, translationKey: 'cardOutcomeBonusPoints' },
-  { action: MinigameCardActionType.STEAL_POINTS, value: 2, translationKey: 'cardOutcomeStealPoints', requiresPlayerChoice: true, playerChoicePromptKey: 'minigamePlayerChoiceSteal' },
-  { action: MinigameCardActionType.DOUBLE_POINTS, value: 0, translationKey: 'cardOutcomeDoublePoints' },
-  { action: MinigameCardActionType.SWAP_SCORES, value: 0, translationKey: 'cardOutcomeSwapScores', requiresPlayerChoice: true, playerChoicePromptKey: 'minigamePlayerChoiceSwap' },
-  { action: MinigameCardActionType.RANDOMIZE_SCORES, value: 0, translationKey: 'cardOutcomeRandomizeScores' },
-  { action: MinigameCardActionType.DOUBLE_TARGET_POINTS, value: 0, translationKey: 'cardOutcomeDoubleTargetPoints', requiresPlayerChoice: true, playerChoicePromptKey: 'minigamePlayerChoiceDoublePoints' },
-  { action: MinigameCardActionType.LOSE_POINTS, value: 2, translationKey: 'cardOutcomeLosePoints' },
-  { action: MinigameCardActionType.LOSE_HALF_POINTS, value: 0, translationKey: 'cardOutcomeLoseHalfPoints' },
-  { action: MinigameCardActionType.GIVE_POINTS, value: 3, translationKey: 'cardOutcomeGivePoints', requiresPlayerChoice: true, playerChoicePromptKey: 'minigamePlayerChoiceGivePoints' },
-];
-
-const ChaosEventItem: React.FC<{ title: string, description: string, emoji: string }> = ({ title, description, emoji }) => (
-  <div className="flex items-start gap-4 p-3 bg-white/5 rounded-2xl border border-white/5">
-    <div className="text-2xl pt-1">{emoji}</div>
-    <div>
-      <h4 className="font-black text-white uppercase text-xs tracking-widest mb-1">{title}</h4>
-      <p className="text-sm text-slate-300 leading-relaxed">{description}</p>
-    </div>
-  </div>
-);
-
 const ChaosModeInfoModal: React.FC<ChaosModeInfoModalProps> = ({ onClose }) => {
   const { t } = useTranslations();
+  const [isClosing, setIsClosing] = useState(false);
 
-  const getEventParts = (key: keyof AppTranslations) => {
-    const text = t(key);
-    const parts = text.split(':');
-    const title = parts[0];
-    const description = parts.slice(1).join(':').trim();
-    return { title, description };
-  };
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 220);
+  }, [isClosing, onClose]);
+
+  // Handle ESC key to dismiss
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleClose]);
 
   return (
-    <Modal title={t('chaosModeInfoTitle')} onClose={onClose}>
-      <div className="space-y-6 max-h-[75vh] overflow-y-auto p-1 pr-3 custom-scrollbar">
-        <p className="text-center text-slate-300 text-sm leading-relaxed mb-4">
-          {t('chaosModeInfoDescription')}
-        </p>
-        
-        <div className="space-y-3">
-          <ChaosEventItem 
-            emoji="🤪"
-            title={getEventParts('chaosEventNicknames').title}
-            description={getEventParts('chaosEventNicknames').description}
-          />
-          <ChaosEventItem 
-            emoji="📜"
-            title={getEventParts('chaosEventTurnModifier').title}
-            description={getEventParts('chaosEventTurnModifier').description}
-          />
+    <div
+      className={`fixed inset-0 z-[200] flex flex-col justify-between items-center px-6 pb-6 pt-safe-top sm:p-10 select-none overflow-hidden ${
+        isClosing ? 'animate-modal-backdrop-exit' : 'animate-modal-backdrop-enter'
+      }`}
+      style={{
+        backgroundColor: '#0b0517',
+        backgroundImage: 'radial-gradient(circle at 50% 32%, rgba(249, 115, 22, 0.38) 0%, rgba(220, 38, 38, 0.22) 38%, rgba(124, 58, 237, 0.18) 72%, #0b0517 100%)',
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('chaosModeInfoTitle')}
+    >
+      {/* Top Header / Dismiss Row */}
+      <div className="w-full max-w-4xl flex items-center justify-between z-10">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/40 shadow-[0_0_20px_rgba(249,115,22,0.3)]">
+          <span className="text-base">🔥</span>
+          <span className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-widest">
+            {t('chaosMode')}
+          </span>
         </div>
 
-        <div className="mt-8 border-t border-white/10 pt-6">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-[#FBBF24] mb-4 text-center">
-            The Chaos Deck 🃏
-          </h3>
-          <div className="grid grid-cols-1 gap-2">
-            {ALL_POSSIBLE_OUTCOMES.map((outcome, index) => {
-              const isPositive = [MinigameCardActionType.BONUS_POINTS, MinigameCardActionType.DOUBLE_POINTS, MinigameCardActionType.STEAL_POINTS].includes(outcome.action);
-              const isNegative = [MinigameCardActionType.LOSE_POINTS, MinigameCardActionType.LOSE_HALF_POINTS].includes(outcome.action);
-              
-              return (
-                <div 
-                  key={index}
-                  className={`flex items-center justify-between p-3 rounded-xl border ${
-                    isPositive ? 'bg-green-500/10 border-green-500/20' : 
-                    isNegative ? 'bg-red-500/10 border-red-500/20' : 
-                    'bg-white/5 border-white/10'
-                  }`}
-                >
-                  <span className={`text-xs font-black uppercase tracking-tight ${
-                    isPositive ? 'text-green-400' : 
-                    isNegative ? 'text-red-400' : 
-                    'text-white'
-                  }`}>
-                    {t(outcome.translationKey as any, { value: outcome.value })}
-                  </span>
-                  
-                  {outcome.requiresPlayerChoice && (
-                    <span className="text-[8px] font-black bg-[#FBBF24] text-[#4c1d95] px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                      Choice
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 border border-white/20 text-white/90 hover:text-white flex items-center justify-center text-3xl transition-all shadow-lg cursor-pointer backdrop-blur-md"
+          aria-label="Close"
+        >
+          &times;
+        </button>
+      </div>
+
+      {/* Hero Center - Disruptive, Bigger & Bolder */}
+      <div 
+        className={`w-full max-w-3xl flex flex-col items-center justify-center my-auto px-4 py-6 text-center z-10 transition-all ${
+          isClosing ? 'animate-modal-exit' : 'animate-chaos-card-zoom'
+        }`}
+      >
+        {/* Flame Badge */}
+        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-600 flex items-center justify-center text-5xl sm:text-7xl shadow-[0_0_70px_rgba(249,115,22,0.85),inset_0_2px_4px_rgba(255,255,255,0.7)] border-2 border-amber-300 transform animate-bounce mb-5 sm:mb-7">
+          🔥
+        </div>
+
+        {/* Title: What is Chaos Mode? */}
+        <h2 className="font-luckiest-guy text-4xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-orange-400 to-red-500 drop-shadow-[0_8px_30px_rgba(249,115,22,0.7)] uppercase tracking-tight leading-[1.1] mb-5 sm:mb-6">
+          {t('chaosModeInfoTitle')}
+        </h2>
+
+        {/* Main description: When enabled, random chaos events can occur between turns, shaking up the game! */}
+        <p className="text-xl sm:text-3xl md:text-4xl font-black text-white leading-snug sm:leading-normal drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)] max-w-2xl mb-6 sm:mb-8">
+          {t('chaosModeInfoDescription')}
+        </p>
+
+        {/* Punchline Banner: You never know what might happen… */}
+        <div className="px-6 sm:px-10 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-red-600/30 via-orange-500/25 to-purple-600/30 border-2 border-orange-500/70 shadow-[0_0_35px_rgba(249,115,22,0.45)] backdrop-blur-md transform -rotate-1 hover:rotate-0 transition-transform">
+          <p className="text-lg sm:text-2xl md:text-3xl font-black text-amber-300 uppercase italic tracking-wide drop-shadow">
+            {t('chaosModeNeverKnow')}
+          </p>
         </div>
       </div>
-    </Modal>
+
+      {/* Bottom CTA Action Button */}
+      <div className="w-full max-w-md flex justify-center pb-2 z-10">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="w-full h-16 sm:h-18 rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-white font-black text-xl sm:text-2xl uppercase tracking-widest shadow-[0_12px_35px_rgba(249,115,22,0.6),inset_0_2px_3px_rgba(255,255,255,0.7)] active:scale-95 hover:brightness-110 transition-all border border-amber-300/50 flex items-center justify-center cursor-pointer"
+        >
+          {t('chaosModeGotIt')}
+        </button>
+      </div>
+    </div>
   );
 };
 

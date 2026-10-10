@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build and cache
+.firebase/
+.agents/
+dev-dist/
+assets/public/

@@ -1,11 +1,14 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.saywhaaat.app",
       "sha256_cert_fingerprints": [
-        "E6:21:FC:92:56:E8:EC:52:D7:67:BE:5E:3A:96:91:1A:A3:FA:8A:95:91:D3:05:68:BF:58:5B:BD:5B:EB:64:D2" 
+        "08:DA:F4:CF:3F:D4:E7:C1:7E:83:39:1B:73:38:07:F0:55:2D:87:14:F7:21:BC:91:E0:42:64:08:FF:BF:9B:9E"
       ]
     }
   }

@@ -14,8 +14,15 @@ import ParticleBackground from './components/ParticleBackground';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoadingScreen from './components/LoadingScreen';
 import WelcomeScreen from './components/WelcomeScreen';
+import PrivacyPolicy from './components/PrivacyPolicy';
 import { App as CapApp } from '@capacitor/app'; // Correct import
+import { Capacitor } from '@capacitor/core';
 import { AdMob, AdOptions, InterstitialAdPluginEvents } from '@capacitor-community/admob';
+
+
+import { initializeFirebase } from './services/firebaseService';
+import { transitionNavigate } from './utils/navigationUtils';
+import ScreenTransition from './components/ScreenTransition';
 
 // ... (keep your useKeepScreenAwake code exactly as it is) ...
 
@@ -26,6 +33,10 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    initializeFirebase();
+  }, []);
+
+  useEffect(() => {
     if (localStorage.getItem('saywhaaat_dark_mode') === 'true' ||
         (!('saywhaaat_dark_mode' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
@@ -34,62 +45,117 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // --- WEB JOIN LINK HANDLER ---
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const path = location.pathname;
+    let gameId: string | null = null;
+
+    // 1. Check for query parameter
+    gameId = searchParams.get('joinGameId');
+
+    // 2. Check for path parameter if no query param found
+    if (!gameId && path.startsWith('/join/')) {
+      const pathSegments = path.split('/');
+      if (pathSegments.length > 2 && pathSegments[2]) {
+        gameId = pathSegments[2];
+      }
+    }
+
+    if (gameId) {
+      const isAndroid = /android/i.test(navigator.userAgent);
+      if (isAndroid && Capacitor.getPlatform() === 'web') {
+        window.location.href = 'https://play.google.com/store/apps/details?id=com.saywhaaat.app';
+        return;
+      }
+
+      const lang = searchParams.get('lang');
+
+      navigate('/setup', { 
+        state: { 
+          intent: 'join', 
+          gameId: gameId,
+          lang: lang
+        },
+        replace: true 
+      });
+    }
+  }, [location.pathname, location.search, navigate]);
+  // --- WEB JOIN LINK HANDLER END ---
+
 // useKeepScreenAwake();
 
-// --- NEW: DEEP LINK LISTENER START ---
+// --- DEEP LINK LISTENER START ---
   useEffect(() => {
     let listenerHandle;
 
     const setupDeepLinks = async () => {
-      // 1. Handle "cold start" (App was closed)
+      // Handle app launch URL (cold start)
       const launchUrl = await CapApp.getLaunchUrl();
-      if (launchUrl?.url) {
+      if (launchUrl && launchUrl.url) {
+
         handleUrl(launchUrl.url);
       }
 
-      // 2. Handle links while app is open (await the promise here!)
+      // Listen for subsequent URLs while the app is open
       listenerHandle = await CapApp.addListener('appUrlOpen', (data) => {
         handleUrl(data.url);
       });
+
     };
 
     function handleUrl(url) {
       try {
-        // Remove 'saywhaaat://' scheme if present, leaving just the path
-        let path = url.replace(/^saywhaaat:\/\//, '');
 
-        // If it starts with //, convert to single /
-        if (path.startsWith('//')) {
-          path = path.replace(/^\/\//, '/');
+        const urlObject = new URL(url);
+        const searchParams = urlObject.searchParams;
+        const gameIdFromQuery = searchParams.get('gameId');
+
+        if (gameIdFromQuery) {
+
+          navigate('/setup', {
+            state: {
+              intent: 'join',
+              gameId: gameIdFromQuery
+            },
+            replace: true
+          });
+          return;
         }
+        
+        // Fallback for path-based links
+        const path = urlObject.pathname;
+        if (path.includes('/join/') || path.includes('/lobby/')) {
+            const gameIdFromPath = path.split('/').pop();
+            if (gameIdFromPath) {
 
-        // Handle /join/gameId paths by converting to /lobby/gameId
-        if (path.includes('/join/')) {
-          path = path.replace('/join/', '/lobby/');
+                navigate('/setup', {
+                    state: {
+                        intent: 'join',
+                        gameId: gameIdFromPath
+                    },
+                    replace: true
+                });
+                return;
+            }
         }
+        
 
-        // Ensure path starts with /
-        if (!path.startsWith('/')) {
-          path = '/' + path;
-        }
 
-        console.log("Deep Link Success! Navigating to:", path);
-        navigate(path);
       } catch (err) {
-        console.error("Deep Link Error parsing URL:", err);
+        
       }
     }
 
     setupDeepLinks();
 
-    // 3. Clean up correctly
     return () => {
       if (listenerHandle) {
         listenerHandle.remove();
       }
     };
   }, [navigate]);
-  // --- NEW: DEEP LINK LISTENER END ---
+  // --- DEEP LINK LISTENER END ---
 
   // --- NEW: ADMOB HANDLER START ---
   // Initialize AdMob once on mount
@@ -103,11 +169,13 @@ const App: React.FC = () => {
 
     async function initializeAdMob() {
       try {
-        await AdMob.initialize();
-        console.log("AD LOG: AdMob Initialized");
+                await AdMob.initialize({
+          tagForChildDirectedTreatment: true,
+        });
+
         prepareAdInitial();
       } catch (e) {
-        console.error("AD LOG: Init Failed", e);
+        
       }
     }
 
@@ -117,15 +185,17 @@ const App: React.FC = () => {
           adId: 'ca-app-pub-7599308880531325/6231560290',
           isTesting: true
         });
-        console.log("AD LOG: Ad prepped and ready");
+
       } catch (e) {
-        console.log("AD LOG: Prep failed", e);
+        
       }
     }
 
     initializeAdMob();
   }, []);
   // --- NEW: ADMOB HANDLER END ---
+
+
 
   useEffect(() => {
     const langToSet = gameSession?.language || DEFAULT_LANGUAGE;
@@ -164,51 +234,53 @@ const App: React.FC = () => {
     const expectedPath = routeMapping[gameSession.gameState as keyof typeof routeMapping];
 
     if (expectedPath && currentPath.toUpperCase() !== expectedPath.toUpperCase()) {
-      navigate(expectedPath, { replace: true });
+      transitionNavigate(navigate, expectedPath, { replace: true });
     }
   }, [gameSession, isGameLoading, location.pathname, navigate]);
 
 
-  if (isGameLoading || isTranslationsLoading) {
-    return (
-      <div className="min-h-screen bg-[#4c1d95]">
-        <ParticleBackground />
-        <LoadingScreen />
-      </div>
-    );
-  }
+  const isChaosActive = !!(gameSession?.activeChaosEvent || gameSession?.activeTurnChaos);
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      <ParticleBackground />
-      <main className="flex-grow relative z-10">
-        <Routes>
-          <Route path="/" element={<WelcomeScreen />} />
-          <Route path="/setup" element={<SetupScreen />} />
-          <Route 
-            path="/lobby/:gameId" 
-            element={<ProtectedRoute><LobbyScreen /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/game/:gameId" 
-            element={<ProtectedRoute><GameScreen /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/turn/:gameId" 
-            element={<ProtectedRoute><TurnScreen /></ProtectedRoute>} 
-          />
-           <Route 
-            path="/minigame/:gameId" 
-            element={<ProtectedRoute><CardDrawScreen /></ProtectedRoute>} 
-          />
-          <Route 
-            path="/gameover/:gameId" 
-            element={<ProtectedRoute><GameOverScreen /></ProtectedRoute>} 
-          />
-          {/* Add a /join route if your app logic expects it, or use navigate to lobby directly */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
+    <div className="min-h-screen flex flex-col relative overflow-hidden bg-[#4c1d95]">
+      <ParticleBackground isChaosActive={isChaosActive} />
+      {isGameLoading || isTranslationsLoading ? (
+        <LoadingScreen />
+      ) : (
+        <main className="flex-grow relative z-10 flex flex-col">
+          <ScreenTransition>
+            {(activeLocation) => (
+              <Routes location={activeLocation}>
+                <Route path="/" element={<WelcomeScreen />} />
+                <Route path="/setup" element={<SetupScreen />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route 
+                  path="/lobby/:gameId" 
+                  element={<ProtectedRoute><LobbyScreen /></ProtectedRoute>} 
+                />
+                <Route 
+                  path="/game/:gameId" 
+                  element={<ProtectedRoute><GameScreen /></ProtectedRoute>} 
+                />
+                <Route 
+                  path="/turn/:gameId" 
+                  element={<ProtectedRoute><TurnScreen /></ProtectedRoute>} 
+                />
+                 <Route 
+                  path="/minigame/:gameId" 
+                  element={<ProtectedRoute><CardDrawScreen /></ProtectedRoute>} 
+                />
+                <Route 
+                  path="/gameover/:gameId" 
+                  element={<ProtectedRoute><GameOverScreen /></ProtectedRoute>} 
+                />
+                {/* Add a /join route if your app logic expects it, or use navigate to lobby directly */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            )}
+          </ScreenTransition>
+        </main>
+      )}
     </div>
   );
 };

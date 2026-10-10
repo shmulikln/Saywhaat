@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useTransitionNavigate } from '../utils/navigationUtils';
 import { useTranslations } from '../contexts/TranslationsContext';
 import { Language } from '../types';
 import { APP_VERSION, AVAILABLE_LANGUAGES } from '../constants';
 import AppHeader from './AppHeader';
+import { triggerHaptic } from '../utils/nativeUtils';
 
 const WelcomeScreen: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useTransitionNavigate();
   const { t, setLanguage, language } = useTranslations();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -16,12 +18,10 @@ const WelcomeScreen: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
 
-  // Tutorial Video URLs
-  const TUTORIAL_HEB = "https://firebasestorage.googleapis.com/v0/b/saywhaaat.firebasestorage.app/o/tutorials%2FTutorial-Heb.mp4?alt=media&token=00ca21ee-65e3-49ef-9d94-c1ad07392054";
-  const TUTORIAL_EN = "https://firebasestorage.googleapis.com/v0/b/saywhaaat.firebasestorage.app/o/tutorials%2FTutorial_En.mp4?alt=media&token=5b4e1c96-81d8-4c92-919c-ee1b3996f890";
-
-  // Select video based on language (Hebrew gets Hebrew, everyone else gets English)
-  const videoUrl = language === Language.HE ? TUTORIAL_HEB : TUTORIAL_EN;
+  // Tutorial Video URL (Uses new tutorial.mp4)
+  const base = (import.meta as any).env?.BASE_URL || '/';
+  const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  const videoUrl = `${cleanBase}tutorial.mp4`;
   
   const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
   
@@ -57,18 +57,55 @@ const WelcomeScreen: React.FC = () => {
 
   useEffect(() => {
     if (showTutorial && !isYouTube && videoRef.current) {
+      const video = videoRef.current;
       setVideoError(false);
       setIsVideoLoading(true);
-      videoRef.current.load();
-      const playTimer = setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.play().catch(error => {
-            console.warn("Autoplay blocked or failed:", error);
-            setIsVideoLoading(false);
-          });
+      video.load();
+
+      const playAndGoFullscreen = async () => {
+        try {
+          await video.play();
+          if (video.requestFullscreen) {
+            await video.requestFullscreen();
+          } else if ((video as any).webkitRequestFullscreen) { // Safari
+            await (video as any).webkitRequestFullscreen();
+          } else if ((video as any).msRequestFullscreen) { // IE11
+            await (video as any).msRequestFullscreen();
+          }
+        } catch (error) {
+          console.warn("Autoplay or fullscreen request failed:", error);
+          // If autoplay fails, at least the controls are there for the user.
+          setIsVideoLoading(false);
         }
-      }, 300);
-      return () => clearTimeout(playTimer);
+      };
+
+      const playTimer = setTimeout(playAndGoFullscreen, 300);
+
+      // When the user exits fullscreen, close the tutorial overlay
+      const handleFullscreenChange = () => {
+        if (
+          !document.fullscreenElement &&
+          !(document as any).webkitIsFullScreen && // Safari
+          !(document as any).mozFullScreen && // Firefox
+          !(document as any).msFullscreenElement // IE11
+        ) {
+          setShowTutorial(false);
+        }
+      };
+      
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange); // Safari
+      document.addEventListener('mozfullscreenchange', handleFullscreenChange); // Firefox
+      document.addEventListener('MSFullscreenChange', handleFullscreenChange); // IE11
+
+
+      return () => {
+        clearTimeout(playTimer);
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+      };
     }
   }, [showTutorial, isYouTube, videoUrl]);
 
@@ -79,29 +116,30 @@ const WelcomeScreen: React.FC = () => {
   };
 
   const handleOnlineSelection = (tab: 'create' | 'join') => {
-    navigate('/setup', { state: { mode: 'online', defaultTab: tab } });
+    navigate('/setup', { state: { intent: tab } });
   };
-
-  const handleLocalSelection = () => {
-    navigate('/setup', { state: { mode: 'local' } });
-  }
 
   const currentLangObj = AVAILABLE_LANGUAGES.find(l => l.value === language) || AVAILABLE_LANGUAGES[0];
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-6 relative overflow-x-hidden">
-      <AppHeader size="lg" />
+    <div className="min-h-screen flex flex-col items-center justify-between p-4 pt-safe-top sm:p-6 sm:pt-safe-top relative overflow-x-hidden">
+      {/* Top 45% of page: Logo */}
+      <AppHeader size="hero" />
       
-      <div className="w-full max-w-md flex-grow flex flex-col justify-start animate-fade-in">
+      {/* Lower section: Controls and Action Buttons */}
+      <div className="w-full max-w-sm flex flex-col items-center animate-fade-in mb-auto">
         {/* Top Controls: Tutorial & Language Dropdown */}
-        <div dir="ltr" className="w-full flex items-center justify-between mb-10 px-2 mt-4 relative">
+        <div dir="ltr" className="w-full max-w-[340px] flex items-center justify-between mb-6 px-1 relative">
            <button
+             id="howToPlayBtn"
              onClick={() => { setShowTutorial(true); setVideoError(false); setIsVideoLoading(true); }}
-             className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-full transition-all border border-white/20 backdrop-blur-md shadow-lg active:scale-95"
+             className="flex items-center gap-2 text-xs font-black uppercase tracking-wider bg-white/15 hover:bg-white/25 text-white px-4 py-2.5 rounded-full transition-all border border-white/20 backdrop-blur-md shadow-md active:scale-95"
            >
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-300" viewBox="0 0 20 20" fill="currentColor">
-               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-             </svg>
+             <span className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center -ml-0.5">
+               <svg className="w-2.5 h-2.5 text-white fill-current translate-x-[0.5px]" viewBox="0 0 24 24">
+                 <path d="M8 5v14l11-7z"/>
+               </svg>
+             </span>
              {t('howToPlayButton')}
            </button>
 
@@ -109,11 +147,12 @@ const WelcomeScreen: React.FC = () => {
            <div className="relative" ref={langMenuRef}>
              <button 
                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-               className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2.5 rounded-full border border-white/20 backdrop-blur-md shadow-lg transition-all active:scale-95"
+               className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white px-4 py-2.5 rounded-full border border-white/20 backdrop-blur-md shadow-md transition-all active:scale-95"
              >
-               <span className="text-lg">{currentLangObj.flag}</span>
-               <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">{currentLangObj.label}</span>
-               <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-white/50 transition-transform duration-300 ${isLangMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+               <span className="text-xs font-black uppercase tracking-wider text-white">
+                 {language === Language.EN ? 'GB' : language.toUpperCase()}
+               </span>
+               <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 text-white/80 transition-transform duration-200 ${isLangMenuOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                </svg>
              </button>
@@ -145,37 +184,32 @@ const WelcomeScreen: React.FC = () => {
            </div>
         </div>
 
-        {/* Action Buttons Stack */}
+        {/* Action Buttons Stack - Tactile 3D Capsule Buttons */}
         <div className="flex flex-col items-center gap-5 w-full">
-          {/* Create Game Button */}
+          {/* Create New Game Button */}
           <button
-            onClick={() => handleOnlineSelection('create')}
-            className="w-full max-w-[320px] group relative flex items-center justify-center bg-gradient-to-r from-indigo-600/40 to-indigo-500/40 backdrop-blur-xl py-4 px-8 rounded-full border border-white/20 hover:border-indigo-300/50 hover:from-indigo-600/60 hover:to-indigo-500/60 transition-all shadow-xl active:scale-95 overflow-hidden"
+            onClick={() => {
+              triggerHaptic('LIGHT');
+              handleOnlineSelection('create');
+            }}
+            className="action-capsule-btn action-capsule-btn-create"
           >
-            <h2 className="text-xl font-bold text-white tracking-tight">{t('createGameTitle')}</h2>
+            <span className="action-capsule-text">
+              {t('createGameTitle')}
+            </span>
           </button>
 
-          {/* Join Game Button */}
+          {/* Join a Game Button */}
           <button
-            onClick={() => handleOnlineSelection('join')}
-            className="w-full max-w-[320px] group relative flex items-center justify-center bg-gradient-to-r from-emerald-600/40 to-emerald-500/40 backdrop-blur-xl py-4 px-8 rounded-full border border-white/20 hover:border-emerald-300/50 hover:from-emerald-600/60 hover:to-emerald-500/60 transition-all shadow-xl active:scale-95"
+            onClick={() => {
+              triggerHaptic('LIGHT');
+              handleOnlineSelection('join');
+            }}
+            className="action-capsule-btn action-capsule-btn-join"
           >
-            <h2 className="text-xl font-bold text-white tracking-tight">{t('joinGameTitle')}</h2>
-          </button>
-
-          {/* Separator */}
-          <div className="flex items-center gap-4 my-2 px-2 w-full max-w-[320px]">
-            <div className="flex-grow h-px bg-white/10"></div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">{t('or')}</span>
-            <div className="flex-grow h-px bg-white/10"></div>
-          </div>
-
-          {/* Local Play Button */}
-          <button
-            onClick={handleLocalSelection}
-            className="w-full max-w-[320px] group relative flex items-center justify-center bg-white/10 backdrop-blur-xl py-4 px-8 rounded-full border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all shadow-xl active:scale-95"
-          >
-            <h2 className="text-xl font-bold text-white tracking-tight">{t('playOnOneDevice')}</h2>
+            <span className="action-capsule-text">
+              {t('joinGameTitle')}
+            </span>
           </button>
         </div>
 
@@ -183,7 +217,7 @@ const WelcomeScreen: React.FC = () => {
         {deferredPrompt && (
           <button
             onClick={handleInstallClick}
-            className="mt-10 mx-auto flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-300 hover:text-white transition-colors py-2 px-4 rounded-full border border-indigo-500/30 bg-indigo-500/10"
+            className="mt-6 mx-auto flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-300 hover:text-white transition-colors py-2 px-4 rounded-full border border-indigo-500/30 bg-indigo-500/10"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -193,9 +227,11 @@ const WelcomeScreen: React.FC = () => {
         )}
       </div>
       
-      {/* Footer Info */}
-      <div className="w-full text-center py-6 opacity-30 select-none pointer-events-none">
-        <span className="text-[10px] font-mono font-bold tracking-[0.3em] text-white">{APP_VERSION}</span>
+      {/* Footer Info (50% smaller) */}
+      <div className="w-full text-center py-3 mt-auto">
+        <a href="/privacypolicy.html" target="_blank" rel="noopener noreferrer" className="text-[6px] sm:text-[7px] font-bold tracking-[0.25em] text-white/40 hover:text-white uppercase transition-opacity">
+          Privacy Policy
+        </a>
       </div>
 
       {/* Tutorial Overlay */}
@@ -204,12 +240,12 @@ const WelcomeScreen: React.FC = () => {
           className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-4 animate-fade-in"
           onClick={() => setShowTutorial(false)}
         >
-          <div className="w-full max-w-4xl flex flex-col gap-4" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md flex flex-col gap-3" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center px-4">
                <h3 className="text-white/80 font-black uppercase tracking-[0.4em] text-xs">How to Play</h3>
                <button 
                  onClick={() => setShowTutorial(false)}
-                 className="text-white bg-white/10 hover:bg-white/20 p-2 rounded-full border border-white/20 transition-all active:scale-90"
+                 className="text-white bg-white/10 hover:bg-white/20 p-2 rounded-full border border-white/20 transition-all active:scale-90 cursor-pointer"
                >
                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -217,7 +253,7 @@ const WelcomeScreen: React.FC = () => {
                </button>
             </div>
             
-            <div className="w-full aspect-video bg-black rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] ring-1 ring-white/10 relative flex items-center justify-center">
+            <div className="w-full h-[74vh] max-h-[680px] bg-black rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] ring-1 ring-white/10 relative flex items-center justify-center">
               {isVideoLoading && !videoError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 bg-black/50 z-10">
                   <div className="animate-spin h-10 w-10 border-4 border-indigo-500 border-t-transparent rounded-full mb-4"></div>
@@ -255,7 +291,6 @@ const WelcomeScreen: React.FC = () => {
                   controls
                   playsInline
                   autoPlay
-                  muted
                   preload="auto"
                   onLoadedData={() => setIsVideoLoading(false)}
                   onCanPlay={() => setIsVideoLoading(false)}
