@@ -154,6 +154,7 @@ export interface AppTranslations {
   chaosModeNeverKnow: string;
   chaosModeGotIt: string;
   chaosRequiresThreePlayers: string;
+  chaosDisabledForTeams?: string;
   chaosEventNicknames: string;
   chaosEventStarted: string;
   chaosEventMinigame: string;
@@ -268,6 +269,11 @@ export interface AppTranslations {
   singleRoundUnit?: string;
   defaultRoundIndicator?: string;
 
+  // Rival Team Steal
+  rivalGuessedButton?: string;
+  rivalGuessLocked?: string;
+  teamsScoringRival?: string;
+
   // Game Rules & Scoring Modal
   gameRulesAndScoring?: string;
   rulesTabObjective?: string;
@@ -369,7 +375,7 @@ export interface MinigameState {
 // Turn Summary Types
 export interface TurnWordResult {
   word: string;
-  status: 'guessed' | 'skipped';
+  status: 'guessed' | 'skipped' | 'stolen';
   guesserName?: string;
   guesserId?: string;
 }

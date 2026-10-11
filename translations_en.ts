@@ -122,6 +122,7 @@ export const enTranslations: AppTranslations = {
   chaosModeNeverKnow: "You never know what might happen…",
   chaosModeGotIt: "Got It!",
   chaosRequiresThreePlayers: "For a game of 3 or more",
+  chaosDisabledForTeams: "Not available in Teams mode",
   chaosEventNicknames: "🤪 Silly Nicknames: All players are assigned a random silly nickname for a few rounds.",
   chaosEventStarted: "Chaos Event!",
   chaosEventMinigame: "🃏 Card Draw Minigame: A player gets to draw a card for a chance at a reward... or a prank!",
@@ -238,6 +239,11 @@ export const enTranslations: AppTranslations = {
   singleRoundUnit: "round",
   defaultRoundIndicator: "Default",
 
+  // Rival Team Steal
+  rivalGuessedButton: "Other Team Guessed!",
+  rivalGuessLocked: "Other Team Guess ({seconds}s)",
+  teamsScoringRival: "After 8 seconds, rival team can guess (+1 pt).",
+
   // Game Rules & Scoring
   gameRulesAndScoring: "Rules & Scoring",
   rulesTabObjective: "How to Play",
@@ -251,7 +257,7 @@ export const enTranslations: AppTranslations = {
   ffaScoringGuessed: "Guesser earns +1 pt. Explainer earns +1 pt.",
   ffaScoringSkip: "Explainer loses -1 pt (skips to next word).",
   ffaWinningGoal: "First player to reach the winning score wins!",
-  teamsRulesSummary: "Two teams take turns. On your team's turn, one player explains and their teammates guess. The other team stays quiet!",
+  teamsRulesSummary: "Two teams take turns. On your team's turn, one player explains and teammates guess. If not guessed in 8 seconds, the other team can guess to steal the point!",
   teamsScoringGuessed: "Team earns +1 pt.",
   teamsScoringSkip: "Team loses -1 pt (skips to next word).",
   teamsWinningGoal: "First team to reach the winning score wins!",

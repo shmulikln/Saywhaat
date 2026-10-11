@@ -117,6 +117,7 @@ export const heTranslations: AppTranslations = {
     chaosModeNeverKnow: "אף פעם אי אפשר לדעת מה יקרה…",
     chaosModeGotIt: "הבנתי!",
     chaosRequiresThreePlayers: "למשחק של 3 שחקנים ומעלה",
+    chaosDisabledForTeams: "לא זמין במצב קבוצות",
     chaosEventNicknames: "🤪 כינויים מצחיקים: כל השחקנים מקבלים כינוי מצחיק אקראי למספר סיבובים.",
     chaosEventStarted: "אירוע כאוס!",
     chaosEventMinigame: "🃏 מיני-משחק קלפים: שחקן זוכה לשלוף קלף להזדמנות בפרס... או מתיחה!",
@@ -232,6 +233,11 @@ export const heTranslations: AppTranslations = {
   singleRoundUnit: "סיבוב",
   defaultRoundIndicator: "ברירת מחדל",
 
+  // Rival Team Steal
+  rivalGuessedButton: "הקבוצה היריבה ניחשה!",
+  rivalGuessLocked: "הקבוצה היריבה ({seconds} שנ׳)",
+  teamsScoringRival: "אם לא נוחש תוך 8 שניות, היריבים יכולים לנחש (+1 נק׳).",
+
   // Game Rules & Scoring
   gameRulesAndScoring: "חוקים וניקוד",
   rulesTabObjective: "איך משחקים",
@@ -245,7 +251,7 @@ export const heTranslations: AppTranslations = {
   ffaScoringGuessed: "המנחש מקבל 1+ נקודה. המסביר מקבל 1+ נקודה.",
   ffaScoringSkip: "המסביר מאבד 1- נקודה (ועובר למילה הבאה).",
   ffaWinningGoal: "השחקן הראשון שמגיע לניקוד היעד מנצח!",
-  teamsRulesSummary: "שתי קבוצות משחקות בתורות. בתור של הקבוצה שלכם, שחקן אחד מסביר והחברים שלו מנחשים. הקבוצה היריבה שותקת!",
+  teamsRulesSummary: "שתי קבוצות משחקות בתורות. שחקן אחד מסביר וחברי קבוצתו מנחשים. אם לא נוחש תוך 8 שניות, הקבוצה היריבה יכולה לחטוף את הנקודה!",
   teamsScoringGuessed: "הקבוצה מקבלת 1+ נקודות.",
   teamsScoringSkip: "הקבוצה מאבדת 1- נקודה (ועוברת למילה הבאה).",
   teamsWinningGoal: "הקבוצה הראשונה שמגיעה לניקוד היעד מנצחת!",

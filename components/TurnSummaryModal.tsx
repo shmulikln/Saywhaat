@@ -50,12 +50,15 @@ const TurnSummaryModal: React.FC<TurnSummaryModalProps> = ({
           ) : (
             words.map((item, index) => {
               const isGuessed = item.status === 'guessed';
+              const isStolen = item.status === 'stolen';
               return (
                 <div
                   key={`${item.word}-${index}`}
                   className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
                     isGuessed
                       ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-100 shadow-[0_4px_15px_rgba(16,185,129,0.15)]'
+                      : isStolen
+                      ? 'bg-amber-500/15 border-amber-400/40 text-amber-100 shadow-[0_4px_15px_rgba(245,158,11,0.15)]'
                       : 'bg-rose-500/15 border-rose-400/40 text-rose-100 shadow-[0_4px_15px_rgba(244,63,94,0.15)]'
                   }`}
                 >
@@ -64,10 +67,12 @@ const TurnSummaryModal: React.FC<TurnSummaryModalProps> = ({
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
                         isGuessed
                           ? 'bg-emerald-400 text-[#064e3b]'
+                          : isStolen
+                          ? 'bg-amber-400 text-[#78350f]'
                           : 'bg-rose-400 text-[#4c0519]'
                       }`}
                     >
-                      {isGuessed ? '✓' : '✕'}
+                      {isGuessed ? '✓' : isStolen ? '⚡' : '✕'}
                     </span>
                     <span className="text-base sm:text-lg font-bold truncate">
                       {item.word}
@@ -80,6 +85,13 @@ const TurnSummaryModal: React.FC<TurnSummaryModalProps> = ({
                         {item.guesserName
                           ? t('guessedBy', { name: item.guesserName })
                           : t('wordsGuessed')}{' '}
+                        (+1)
+                      </span>
+                    ) : isStolen ? (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30">
+                        {item.guesserName
+                          ? t('guessedBy', { name: item.guesserName })
+                          : (t('rivalGuessedButton') || 'Stolen')}{' '}
                         (+1)
                       </span>
                     ) : (

@@ -2,6 +2,7 @@ import { triggerHaptic } from './nativeUtils';
 
 let countdownAudio: HTMLAudioElement | null = null;
 let turnEndedAudio: HTMLAudioElement | null = null;
+let airhornAudio: HTMLAudioElement | null = null;
 
 const getSoundUrl = (fileName: string): string => {
   const base = (import.meta as any).env?.BASE_URL || '/';
@@ -27,6 +28,16 @@ const getTurnEndedAudio = (): HTMLAudioElement | null => {
     turnEndedAudio.preload = 'auto';
   }
   return turnEndedAudio;
+};
+
+const getAirhornAudio = (): HTMLAudioElement | null => {
+  if (typeof window === 'undefined') return null;
+  if (!airhornAudio) {
+    airhornAudio = new Audio(getSoundUrl('airhorn.mp3'));
+    airhornAudio.loop = false;
+    airhornAudio.preload = 'auto';
+  }
+  return airhornAudio;
 };
 
 /**
@@ -213,3 +224,58 @@ export const playSkipSound = () => {
     osc.stop(ctx.currentTime + 0.12);
   } catch (e) {}
 };
+
+export const playFallbackHornSound = () => {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Classic stadium air horn multi-tone chord: A#3, D4, F4, A#4
+    const freqs = [233.08, 293.66, 349.23, 466.16];
+
+    freqs.forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.linearRampToValueAtTime(freq * 1.01, now + 0.04);
+      osc.frequency.linearRampToValueAtTime(freq * 0.97, now + 0.35);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
+      gain.gain.setValueAtTime(0.18, now + 0.25);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.38);
+    });
+
+    triggerHaptic('MEDIUM');
+  } catch (e) {}
+};
+
+export const playHornSound = () => {
+  try {
+    const audio = getAirhornAudio();
+    if (audio) {
+      audio.currentTime = 0;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          playFallbackHornSound();
+        });
+      }
+    } else {
+      playFallbackHornSound();
+    }
+    triggerHaptic('MEDIUM');
+  } catch (e) {
+    playFallbackHornSound();
+  }
+};
+

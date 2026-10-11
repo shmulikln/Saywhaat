@@ -117,6 +117,7 @@ export const zhTranslations: AppTranslations = {
   chaosModeNeverKnow: "你永遠不知道會發生什麼…",
   chaosModeGotIt: "明白了！",
   chaosRequiresThreePlayers: "適合 3 人或以上遊玩",
+  chaosDisabledForTeams: "隊伍模式不可用",
   chaosEventNicknames: "🤪 滑稽綽號：所有玩家都會在幾輪內被分配一個隨機的滑稽綽號。",
   chaosEventStarted: "混亂事件！",
   chaosEventMinigame: "🃏 抽牌小遊戲：一名玩家可以抽一張牌，有機會獲得獎勵... 或惡作劇！",
@@ -233,6 +234,11 @@ export const zhTranslations: AppTranslations = {
   singleRoundUnit: "回合",
   defaultRoundIndicator: "預設",
 
+  // Rival Team Steal
+  rivalGuessedButton: "對方隊伍猜中了！",
+  rivalGuessLocked: "對方隊伍 ({seconds}秒)",
+  teamsScoringRival: "若8秒內未猜中，對手隊伍可搶猜 (+1 分)。",
+
   // Game Rules & Scoring
   gameRulesAndScoring: "規則與計分",
   rulesTabObjective: "遊戲玩法",
@@ -246,7 +252,7 @@ export const zhTranslations: AppTranslations = {
   ffaScoringGuessed: "猜對者獲得 +1 分。描述者獲得 +1 分。",
   ffaScoringSkip: "描述者扣 -1 分（並跳至下一個詞）。",
   ffaWinningGoal: "率先達到目標分數的玩家獲勝！",
-  teamsRulesSummary: "兩隊輪流進行。在己方回合中，一人描述，隊友搶答。對手隊伍保持安靜！",
+  teamsRulesSummary: "兩隊輪流進行。一人描述，隊友競猜。若8秒內未猜中，對手隊伍可以搶答得分！",
   teamsScoringGuessed: "隊伍獲得 +1 分。",
   teamsScoringSkip: "隊伍扣 -1 分（並跳至下一個詞）。",
   teamsWinningGoal: "率先達到目標分數的隊伍獲勝！",

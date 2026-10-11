@@ -523,3 +523,90 @@ export const calculateSkip = (session: GameSession, t: (key: string) => string):
     }
     return { ...session, players: updatedPlayers, currentWord: nextWord, words: remainingWords, turnSummary: updatedSummary, lastGuessEvent: null };
 };
+
+export const calculateRivalGuess = (session: GameSession, t: (key: string) => string): GameSession => {
+  if (session.playMode !== 'teams' || !session.teams || !session.activeTeamId) {
+    return session;
+  }
+
+  const activeTeamId = session.activeTeamId;
+  const rivalTeamId = activeTeamId === 'team1' ? 'team2' : 'team1';
+  const rivalTeamName = session.teams[rivalTeamId]?.name || (rivalTeamId === 'team1' ? t('defaultTeam1Name') : t('defaultTeam2Name'));
+  
+  const currentRivalScore = Number(session.teams[rivalTeamId]?.score) || 0;
+  const newRivalScore = currentRivalScore + 1;
+  const updatedTeams = {
+    ...session.teams,
+    [rivalTeamId]: {
+      ...session.teams[rivalTeamId],
+      score: newRivalScore,
+    },
+  };
+
+  const gameShouldEnd = newRivalScore >= session.winningScore;
+  const guessedWord = session.currentWord || '';
+  const remainingWords = normalizeArray<string>(session.words);
+  const nextWord = remainingWords.shift() || null;
+
+  const guessEvent: GuessEvent = {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    word: guessedWord,
+    guesserName: rivalTeamName,
+    points: 1,
+    timestamp: Date.now(),
+  };
+
+  const currentSummary: TurnSummary = session.turnSummary || {
+    explainerId: session.currentTurnPlayerId,
+    explainerName: session.players[session.currentTurnPlayerId]?.name || '',
+    words: [],
+    scoresDelta: {},
+  };
+
+  const summaryWords = normalizeArray(currentSummary.words);
+  const newWords = guessedWord
+    ? [...summaryWords, { word: guessedWord, status: 'stolen' as const, guesserName: rivalTeamName }]
+    : summaryWords;
+
+  const newScoresDelta = { ...(currentSummary.scoresDelta || {}) };
+  newScoresDelta[rivalTeamId] = {
+    name: rivalTeamName,
+    delta: (newScoresDelta[rivalTeamId]?.delta || 0) + 1,
+  };
+
+  const updatedSummary: TurnSummary = {
+    ...currentSummary,
+    words: newWords,
+    scoresDelta: newScoresDelta,
+  };
+
+  let updatedSession: GameSession = {
+    ...session,
+    teams: updatedTeams,
+    currentWord: nextWord,
+    words: remainingWords,
+    lastGuessEvent: guessEvent,
+    turnSummary: updatedSummary,
+  };
+
+  if (gameShouldEnd) {
+    return {
+      ...updatedSession,
+      gameState: GameState.GAME_OVER,
+      currentWord: null,
+      turnStartTime: null,
+      isTurnSummaryActive: false,
+    };
+  }
+
+  if (!nextWord) {
+    return {
+      ...updatedSession,
+      gameState: GameState.IN_GAME,
+      turnStartTime: null,
+    };
+  }
+
+  return updatedSession;
+};
+

@@ -5,7 +5,7 @@ import { TURN_DURATION_SECONDS, DUO_TURN_DURATION_SECONDS, CHAOS_EVENT_CHANCE } 
 import { generateId, shuffleArray, generateGameCode } from '../utils/gameUtils';
 import { CHAOS_NICKNAMES } from '../utils/chaosUtils';
 import { applyMinigameOutcome } from '../utils/minigameLogic';
-import { calculateStartTurn, calculateAdvanceTurn, calculateGuess, calculateSkip, calculateEndTurn } from '../utils/turnLogic';
+import { calculateStartTurn, calculateAdvanceTurn, calculateGuess, calculateSkip, calculateRivalGuess, calculateEndTurn } from '../utils/turnLogic';
 import { useTranslations } from './TranslationsContext';
 import { listenToGameUpdates, createGameInDb, getGameFromDb, runGameTransaction, addPendingPlayer, listenToPendingPlayers, clearPendingPlayers } from '../services/firebaseService';
 import { AdMob } from '@capacitor-community/admob';
@@ -35,6 +35,7 @@ interface GameSessionContextType {
   advanceTurn: () => void;
   endTurn: () => void;
   handleGuessedWord: (guesserId?: string) => void;
+  handleRivalGuessedWord: () => void;
   handleSkipWord: () => void;
   startRematch: () => void;
   continueRematch: () => void;
@@ -1031,6 +1032,28 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [gameSession, t]);
 
+  const handleRivalGuessedWord = useCallback(() => {
+    const currentGame = gameSessionRef.current || gameSession;
+    if (!currentGame) return;
+    if (currentGame.gameState !== GameState.TURN_ACTIVE && !currentGame.currentWord) return;
+    const safeT = (k: string) => t(k as keyof AppTranslations);
+
+    try {
+      const nextLocalSession = calculateRivalGuess(currentGame, safeT);
+      setGameSessionState(nextLocalSession);
+      gameSessionRef.current = nextLocalSession;
+
+      if (currentGame.gameMode === 'online') {
+        runGameTransaction(currentGame.gameId, (dbSession) => {
+          const base = dbSession || currentGame;
+          return calculateRivalGuess(base, safeT);
+        }).catch(err => console.error(`[GameAction] handleRivalGuessedWord failed:`, err));
+      }
+    } catch (err) {
+      console.error(`[GameAction] CRITICAL error in handleRivalGuessedWord:`, err);
+    }
+  }, [gameSession, t]);
+
   const handleSkipWord = useCallback(() => {
     const currentGame = gameSessionRef.current || gameSession;
     if (!currentGame) return;
@@ -1123,13 +1146,13 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const value = useMemo(() => ({
     gameSession, isLoading, localPlayerId, loadingTitle, loadingSteps, isJoinChecklistVisible, joinChecklistSteps, showAdOverlay, setShowAdOverlay,
     createNewGame, createLocalGame, joinGame, addPlayer, switchTeam, requestStartGame, leaveGame, startTurn, advanceTurn, endTurn,
-    handleGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction,
+    handleGuessedWord, handleRivalGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction,
     endMinigame, startMinigameSimulation, resetLoadingState, resetJoinChecklist,
     setLanguage
   }), [
     gameSession, isLoading, localPlayerId, loadingTitle, loadingSteps, isJoinChecklistVisible, joinChecklistSteps, showAdOverlay, setShowAdOverlay,
     createNewGame, createLocalGame, joinGame, addPlayer, switchTeam, requestStartGame, leaveGame, startTurn, advanceTurn, endTurn,
-    handleGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction,
+    handleGuessedWord, handleRivalGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction,
     endMinigame, startMinigameSimulation, resetLoadingState, resetJoinChecklist,
     setLanguage
   ]);

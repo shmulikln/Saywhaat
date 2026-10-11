@@ -96,6 +96,23 @@ const GameRulesModal: React.FC<GameRulesModalProps> = ({ currentMode = 'individu
             </span>
           </div>
 
+          {/* Rival Steal Row (Teams mode only) */}
+          {currentMode === 'teams' && (
+            <div className="flex items-center justify-between gap-3 py-0.5">
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">
+                  {t('rivalGuessedButton') || 'Rival Steal'}
+                </span>
+                <p className="text-[11px] text-slate-300 leading-tight mt-0.5">
+                  {t('teamsScoringRival') || 'After 8 seconds, rival team can guess (+1 pt).'}
+                </p>
+              </div>
+              <span className="text-sm font-mono font-black text-amber-400 shrink-0">
+                +1
+              </span>
+            </div>
+          )}
+
           {/* Skip Row */}
           <div className="flex items-center justify-between gap-3 py-0.5">
             <div className="min-w-0">

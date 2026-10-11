@@ -117,6 +117,7 @@ export const arTranslations: AppTranslations = {
   chaosModeNeverKnow: "لا يمكنك أبدًا معرفة ما قد يحدث…",
   chaosModeGotIt: "فهمت!",
   chaosRequiresThreePlayers: "للعبة من 3 لاعبين أو أكثر",
+  chaosDisabledForTeams: "غير متوفر في وضع الفرق",
   chaosEventNicknames: "🤪 ألقاب مضحكة: يتم تعيين لقب مضحك عشوائي لكل اللاعبين لبضع جولات.",
   chaosEventStarted: "حدث فوضوي!",
   chaosEventMinigame: "🃏 لعبة الكروت المصغرة: يسحب لاعب كرت للحصول على مكافأة... أو مقلب!",
@@ -233,6 +234,11 @@ export const arTranslations: AppTranslations = {
   singleRoundUnit: "جولة",
   defaultRoundIndicator: "افتراضي",
 
+  // Rival Team Steal
+  rivalGuessedButton: "خمّن الفريق الآخر!",
+  rivalGuessLocked: "تخمين الفريق الآخر ({seconds}ث)",
+  teamsScoringRival: "إذا لم يتم التخمين خلال 8 ثوانٍ، يمكن للفريق المنافس التخمين (+1 نقطة).",
+
   // Game Rules & Scoring
   gameRulesAndScoring: "القواعد والنقاط",
   rulesTabObjective: "كيفية اللعب",
@@ -246,7 +252,7 @@ export const arTranslations: AppTranslations = {
   ffaScoringGuessed: "يحصل المخمن على +1 نقطة. يحصل الشارح على +1 نقطة.",
   ffaScoringSkip: "يخسر الشارح -1 نقطة (وينتقل إلى الكلمة التالية).",
   ffaWinningGoal: "أول لاعب يصل إلى نقاط الهدف يفوز!",
-  teamsRulesSummary: "يتناوب فريقان. في دور فريقك، يشرح لاعب واحد ويخمن زملاؤه. الفريق الآخر يلتزم الصمت!",
+  teamsRulesSummary: "يتناوب فريقان. يشرح لاعب واحد ويخمن زملاؤه. إذا لم يتم التخمين خلال 8 ثوانٍ، يمكن للفريق المنافس التخمين لخطف النقطة!",
   teamsScoringGuessed: "يحصل الفريق على +1 نقطة.",
   teamsScoringSkip: "يخسر الفريق -1 نقطة (وينتقل إلى الكلمة التالية).",
   teamsWinningGoal: "أول فريق يصل إلى نقاط الهدف يفوز!",

@@ -115,6 +115,7 @@ export const ptTranslations: AppTranslations = {
   chaosModeNeverKnow: "Nunca se sabe o que pode acontecer…",
   chaosModeGotIt: "Entendi!",
   chaosRequiresThreePlayers: "Para jogos com 3 ou mais jogadores",
+  chaosDisabledForTeams: "Não disponível no modo de equipas",
   chaosEventNicknames: "🤪 Apelidos Engraçados: Todos recebem um apelido bobo aleatório por algumas rodadas.",
   chaosEventStarted: "Evento de Caos!",
   chaosEventMinigame: "🃏 Minijogo de Cartas: Um jogador tira uma carta para uma chance de recompensa... ou partida!",
@@ -231,6 +232,11 @@ export const ptTranslations: AppTranslations = {
   singleRoundUnit: "rodada",
   defaultRoundIndicator: "Padrão",
 
+  // Rival Team Steal
+  rivalGuessedButton: "Outro time acertou!",
+  rivalGuessLocked: "Outro time ({seconds}s)",
+  teamsScoringRival: "Se não acertarem em 8s, o time rival pode acertar (+1 pt).",
+
   // Game Rules & Scoring
   gameRulesAndScoring: "Regras e Pontuação",
   rulesTabObjective: "Como Jogar",
@@ -244,7 +250,7 @@ export const ptTranslations: AppTranslations = {
   ffaScoringGuessed: "Quem adivinha ganha +1 pt. Quem explica ganha +1 pt.",
   ffaScoringSkip: "Quem explica perde -1 pt (passa para a próxima palavra).",
   ffaWinningGoal: "O primeiro jogador a atingir a pontuação alvo vence!",
-  teamsRulesSummary: "Duas equipas jogam à vez. Na vez da sua equipa, um jogador explica e os colegas adivinham. A outra equipa fica em silêncio!",
+  teamsRulesSummary: "Duas equipas jogam à vez. Um jogador explica e os colegas adivinham. Se não acertarem em 8 segundos, a equipa rival pode roubar o ponto!",
   teamsScoringGuessed: "A equipa ganha +1 pt.",
   teamsScoringSkip: "A equipa perde -1 pt (passa para a próxima palavra).",
   teamsWinningGoal: "A primeira equipa a atingir a pontuação alvo vence!",

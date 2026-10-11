@@ -117,6 +117,7 @@ export const idTranslations: AppTranslations = {
   chaosModeNeverKnow: "Kamu tidak pernah tahu apa yang bisa terjadi…",
   chaosModeGotIt: "Mengerti!",
   chaosRequiresThreePlayers: "Untuk permainan 3 pemain atau lebih",
+  chaosDisabledForTeams: "Tidak tersedia dalam mode Tim",
   chaosEventNicknames: "🤪 Nama Konyol: Semua pemain mendapatkan nama panggilan lucu secara acak selama beberapa putaran.",
   chaosEventStarted: "Kejadian Chaos!",
   chaosEventMinigame: "🃏 Minigame Tarik Kartu: Seorang pemain menarik kartu untuk kesempatan hadiah... atau jebakan!",
@@ -233,6 +234,11 @@ export const idTranslations: AppTranslations = {
   singleRoundUnit: "babak",
   defaultRoundIndicator: "Bawaan",
 
+  // Rival Team Steal
+  rivalGuessedButton: "Tim lawan menebak!",
+  rivalGuessLocked: "Tim lawan ({seconds}d)",
+  teamsScoringRival: "Jika tidak ditebak dalam 8 detik, tim lawan bisa menebak (+1 poin).",
+
   // Game Rules & Scoring
   gameRulesAndScoring: "Aturan & Poin",
   rulesTabObjective: "Cara Bermain",
@@ -246,7 +252,7 @@ export const idTranslations: AppTranslations = {
   ffaScoringGuessed: "Penebak dapat +1 poin. Penjelas dapat +1 poin.",
   ffaScoringSkip: "Penjelas kehilangan -1 poin (ganti kata berikutnya).",
   ffaWinningGoal: "Pemain pertama yang mencapai skor target menang!",
-  teamsRulesSummary: "Dua tim bermain bergiliran. Pada giliran tim Anda, satu pemain menjelaskan dan rekan tim menebak. Tim lawan tetap diam!",
+  teamsRulesSummary: "Dua tim bermain bergiliran. Satu pemain menjelaskan dan rekan tim menebak. Jika tidak ditebak dalam 8 detik, tim lawan bisa merebut poin!",
   teamsScoringGuessed: "Tim mendapatkan +1 poin.",
   teamsScoringSkip: "Tim kehilangan -1 poin (ganti kata berikutnya).",
   teamsWinningGoal: "Tim pertama yang mencapai skor target menang!",

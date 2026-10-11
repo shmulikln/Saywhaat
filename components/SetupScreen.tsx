@@ -156,7 +156,8 @@ const SetupScreen: React.FC = () => {
       return;
     }
     if (isProcessing) return;
-    await createNewGame(hostName, language, selectedWinningScore, isChaosModeEnabled, playMode, team1Name, team2Name);
+    const finalChaosMode = playMode === 'teams' ? false : isChaosModeEnabled;
+    await createNewGame(hostName, language, selectedWinningScore, finalChaosMode, playMode, team1Name, team2Name);
   }, [hostName, language, selectedWinningScore, isChaosModeEnabled, playMode, team1Name, team2Name, createNewGame, t, isProcessing]);
 
   const handleJoinOnlineGame = useCallback(async () => {
@@ -191,7 +192,7 @@ const SetupScreen: React.FC = () => {
     const playerNames = localPlayers.map(p => p.name);
     const isDuo = playMode !== 'teams' && localPlayers.length === 2;
     const finalPlayMode = isDuo ? 'duo' : playMode;
-    const finalChaosMode = isDuo ? false : isChaosModeEnabled;
+    const finalChaosMode = (isDuo || playMode === 'teams') ? false : isChaosModeEnabled;
     await createLocalGame(playerNames, language, selectedWinningScore, finalChaosMode, finalPlayMode, team1Name, team2Name, isDuo ? customDuoRounds : undefined);
   }, [localPlayers, language, selectedWinningScore, isChaosModeEnabled, playMode, team1Name, team2Name, customDuoRounds, createLocalGame, t]);
 
@@ -299,81 +300,91 @@ const SetupScreen: React.FC = () => {
         )}
 
         {/* Chaos Mode Card */}
-        <div className={`relative p-5 rounded-[28px] transition-all duration-300 border ${
-          isDuo
-            ? 'bg-white/5 border-white/10 opacity-70 cursor-not-allowed'
-            : isChaosModeEnabled 
-              ? 'bg-gradient-to-r from-orange-600/30 via-red-600/20 to-purple-600/30 border-orange-500/50 shadow-[0_8px_25px_rgba(251,101,36,0.25)]' 
-              : `${inputBgColor} border-white/20`
-        } backdrop-blur-md flex items-center justify-between`}>
-            <div className="flex items-center gap-3">
-              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl transition-all shadow-inner ${
-                isDuo 
-                  ? 'bg-white/5 text-white/40 grayscale' 
-                  : isChaosModeEnabled 
-                    ? 'bg-orange-500/30 text-orange-300 border border-orange-400/40' 
-                    : 'bg-white/10 text-white/70'
-              }`}>
-                🔥
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className={`block text-sm font-black uppercase tracking-wider ${isDuo ? 'text-white/60' : 'text-white'}`}>
-                    {t('chaosMode')}
-                  </span>
-                  <button 
-                    type="button" 
-                    onClick={() => setChaosInfoVisible(true)} 
-                    className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 text-[10px] font-black flex items-center justify-center transition-all cursor-pointer"
-                    aria-label={t('chaosModeInfoTitle')}
-                  >
-                    ?
-                  </button>
-                </div>
-                {isDuo && (
-                  <span className="text-[11px] font-bold text-amber-300/90 tracking-tight mt-0.5 animate-fade-in">
-                    {t('chaosRequiresThreePlayers')}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <label 
-              htmlFor="chaos-toggle" 
-              className={`flex items-center select-none ${isDuo ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-            >
-                <div dir="ltr" className="relative inline-flex items-center">
-                    <input 
-                      id="chaos-toggle" 
-                      type="checkbox" 
-                      className="sr-only" 
-                      disabled={isDuo}
-                      checked={!isDuo && isChaosModeEnabled} 
-                      onChange={() => {
-                        if (!isDuo) {
-                          setChaosModeEnabled(!isChaosModeEnabled);
-                        }
-                      }} 
-                    />
-                    <div 
-                      className={`w-14 h-8 rounded-full transition-all duration-300 border ${
-                        !isDuo && isChaosModeEnabled 
-                          ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 border-amber-300/80 shadow-[0_0_15px_rgba(249,115,22,0.6)]' 
-                          : 'bg-white/20 border-white/20'
-                      }`}
-                    ></div>
-                    <div 
-                      className={`absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-lg transition-transform duration-300 ease-out flex items-center justify-center ${
-                        !isDuo && isChaosModeEnabled ? 'transform translate-x-6' : 'transform translate-x-0'
-                      }`}
-                    >
-                      {!isDuo && isChaosModeEnabled && (
-                        <span className="text-[10px] leading-none select-none">🔥</span>
-                      )}
+        {(() => {
+          const isChaosDisabled = isDuo || playMode === 'teams';
+          return (
+            <div className={`relative p-5 rounded-[28px] transition-all duration-300 border ${
+              isChaosDisabled
+                ? 'bg-white/5 border-white/10 opacity-70 cursor-not-allowed'
+                : isChaosModeEnabled 
+                  ? 'bg-gradient-to-r from-orange-600/30 via-red-600/20 to-purple-600/30 border-orange-500/50 shadow-[0_8px_25px_rgba(251,101,36,0.25)]' 
+                  : `${inputBgColor} border-white/20`
+            } backdrop-blur-md flex items-center justify-between`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl transition-all shadow-inner ${
+                    isChaosDisabled 
+                      ? 'bg-white/5 text-white/40 grayscale' 
+                      : isChaosModeEnabled 
+                        ? 'bg-orange-500/30 text-orange-300 border border-orange-400/40' 
+                        : 'bg-white/10 text-white/70'
+                  }`}>
+                    🔥
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className={`block text-sm font-black uppercase tracking-wider ${isChaosDisabled ? 'text-white/60' : 'text-white'}`}>
+                        {t('chaosMode')}
+                      </span>
+                      <button 
+                        type="button" 
+                        onClick={() => setChaosInfoVisible(true)} 
+                        className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white/80 text-[10px] font-black flex items-center justify-center transition-all cursor-pointer"
+                        aria-label={t('chaosModeInfoTitle')}
+                      >
+                        ?
+                      </button>
                     </div>
+                    {isDuo && (
+                      <span className="text-[11px] font-bold text-amber-300/90 tracking-tight mt-0.5 animate-fade-in">
+                        {t('chaosRequiresThreePlayers')}
+                      </span>
+                    )}
+                    {playMode === 'teams' && (
+                      <span className="text-[11px] font-bold text-amber-300/90 tracking-tight mt-0.5 animate-fade-in">
+                        {t('chaosDisabledForTeams') || 'Not available in Teams mode'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-            </label>
-        </div>
+
+                <label 
+                  htmlFor="chaos-toggle" 
+                  className={`flex items-center select-none ${isChaosDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                >
+                    <div dir="ltr" className="relative inline-flex items-center">
+                        <input 
+                          id="chaos-toggle" 
+                          type="checkbox" 
+                          className="sr-only" 
+                          disabled={isChaosDisabled}
+                          checked={!isChaosDisabled && isChaosModeEnabled} 
+                          onChange={() => {
+                            if (!isChaosDisabled) {
+                              setChaosModeEnabled(!isChaosModeEnabled);
+                            }
+                          }} 
+                        />
+                        <div 
+                          className={`w-14 h-8 rounded-full transition-all duration-300 border ${
+                            !isChaosDisabled && isChaosModeEnabled 
+                              ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 border-amber-300/80 shadow-[0_0_15px_rgba(249,115,22,0.6)]' 
+                              : 'bg-white/20 border-white/20'
+                          }`}
+                        ></div>
+                        <div 
+                          className={`absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-lg transition-transform duration-300 ease-out flex items-center justify-center ${
+                            !isChaosDisabled && isChaosModeEnabled ? 'transform translate-x-6' : 'transform translate-x-0'
+                          }`}
+                        >
+                          {!isChaosDisabled && isChaosModeEnabled && (
+                            <span className="text-[10px] leading-none select-none">🔥</span>
+                          )}
+                        </div>
+                    </div>
+                </label>
+            </div>
+          );
+        })()}
       </div>
     );
   };

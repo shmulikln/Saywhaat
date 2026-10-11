@@ -117,6 +117,7 @@ export const hiTranslations: AppTranslations = {
   chaosModeNeverKnow: "आप कभी नहीं जान सकते कि क्या हो सकता है…",
   chaosModeGotIt: "समझ गया!",
   chaosRequiresThreePlayers: "3 या अधिक खिलाड़ियों के खेल के लिए",
+  chaosDisabledForTeams: "टीम मोड में उपलब्ध नहीं है",
   chaosEventNicknames: "🤪 मजाकिया नाम: सभी खिलाड़ियों को कुछ राउंड के लिए यादृच्छिक मजाकिया नाम दिए जाते हैं।",
   chaosEventStarted: "क्योस घटना शुरू!",
   chaosEventMinigame: "🃏 कार्ड ड्रा मिनी-गेम: एक खिलाड़ी को इनाम... या मज़ाक के मौके के लिए कार्ड निकालने का मौका मिलता है!",
@@ -233,6 +234,11 @@ export const hiTranslations: AppTranslations = {
   singleRoundUnit: "राउंड",
   defaultRoundIndicator: "डिफ़ॉल्ट",
 
+  // Rival Team Steal
+  rivalGuessedButton: "दूसरी टीम ने अनुमान लगाया!",
+  rivalGuessLocked: "दूसरी टीम ({seconds}s)",
+  teamsScoringRival: "यदि 8 सेकंड में न बताया, तो प्रतिद्वंद्वी टीम बता सकती है (+1 अंक)।",
+
   // Game Rules & Scoring
   gameRulesAndScoring: "नियम और स्कोरिंग",
   rulesTabObjective: "कैसे खेलें",
@@ -246,7 +252,7 @@ export const hiTranslations: AppTranslations = {
   ffaScoringGuessed: "अनुमान लगाने वाले को +1 अंक। समझाने वाले को +1 अंक।",
   ffaScoringSkip: "समझाने वाला -1 अंक खो देता है (अगले शब्द पर बढ़ जाता है)।",
   ffaWinningGoal: "लक्ष्य स्कोर तक पहुँचने वाला पहला खिलाड़ी जीतता है!",
-  teamsRulesSummary: "दो टीमें बारी-बारी से खेलती हैं। आपकी टीम की बारी पर, एक खिलाड़ी समझाता है और साथी अनुमान लगाते हैं। दूसरी टीम चुप रहती है!",
+  teamsRulesSummary: "दो टीमें बारी-बारी से खेलती हैं। एक खिलाड़ी समझाता है और साथी अनुमान लगाते हैं। 8 सेकंड में न बताने पर प्रतिद्वंद्वी टीम अंक छीन सकती है!",
   teamsScoringGuessed: "टीम को +1 अंक मिलता है।",
   teamsScoringSkip: "टीम -1 अंक खो देती है (अगले शब्द पर बढ़ जाती है)।",
   teamsWinningGoal: "लक्ष्य स्कोर तक पहुँचने वाली पहली टीम जीतती है!",

@@ -13,7 +13,8 @@ import {
   stop10SecCountdownSound, 
   playTurnEndedSound, 
   playSuccessSound, 
-  playSkipSound 
+  playSkipSound,
+  playHornSound 
 } from '../utils/soundUtils';
 
 interface AutoFitWordProps {
@@ -104,7 +105,7 @@ const AutoFitWord: React.FC<AutoFitWordProps> = ({ word, language }) => {
 };
 
 const TurnScreen: React.FC = () => {
-  const { gameSession, endTurn, handleGuessedWord, handleSkipWord, localPlayerId } = useGame();
+  const { gameSession, endTurn, handleGuessedWord, handleRivalGuessedWord, handleSkipWord, localPlayerId } = useGame();
   const { t, language } = useTranslations();
   const fontClass = language === Language.HE ? 'font-secular-one' : 'font-outfit';
   const { gameId } = useParams<{ gameId: string }>();
@@ -112,6 +113,7 @@ const TurnScreen: React.FC = () => {
   
   const isLocalGame = gameSession?.gameMode === 'local';
   const isDuoMode = gameSession?.playMode === 'duo';
+  const isTeamsMode = gameSession?.playMode === 'teams';
   const turnChaos = gameSession?.activeTurnChaos;
   const turnDuration = isDuoMode ? 30 : (turnChaos?.type === TurnChaosType.SHORT_TURN && turnChaos.value ? turnChaos.value : TURN_DURATION_SECONDS);
 
@@ -119,9 +121,34 @@ const TurnScreen: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(turnDuration);
   const [guessNotification, setGuessNotification] = useState<{ id: string; word: string; guesserName: string; points?: number } | null>(null);
   const [pointDeltaBadge, setPointDeltaBadge] = useState<{ id: string; delta: '+1' | '-1' } | null>(null);
+  const [wordStartTime, setWordStartTime] = useState<number>(Date.now());
+  const [secondsOnCurrentWord, setSecondsOnCurrentWord] = useState<number>(0);
+  const hasHornPlayedForWordRef = useRef<boolean>(false);
   const lastProcessedGuessIdRef = useRef<string | null>(gameSession?.lastGuessEvent?.id || null);
   const prevGameSessionRef = useRef(gameSession);
   const isPlayingCountdownRef = useRef(false);
+
+  useEffect(() => {
+    setWordStartTime(Date.now());
+    setSecondsOnCurrentWord(0);
+    hasHornPlayedForWordRef.current = false;
+  }, [gameSession?.currentWord]);
+
+  useEffect(() => {
+    if (!isTeamsMode || !gameSession?.turnStartTime) return;
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - wordStartTime) / 1000);
+      setSecondsOnCurrentWord(elapsed);
+      if (elapsed >= 8 && !hasHornPlayedForWordRef.current && gameSession?.currentWord) {
+        hasHornPlayedForWordRef.current = true;
+        playHornSound();
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [isTeamsMode, gameSession?.turnStartTime, gameSession?.currentWord, wordStartTime]);
+
+  const rivalCooldownRemaining = Math.max(0, 8 - secondsOnCurrentWord);
+  const isRivalStealUnlocked = rivalCooldownRemaining === 0 && !!gameSession?.currentWord;
 
   const triggerPointBadge = useCallback((delta: '+1' | '-1') => {
     setPointDeltaBadge({
@@ -313,7 +340,6 @@ const TurnScreen: React.FC = () => {
     }
   };
 
-  const isTeamsMode = gameSession.playMode === 'teams';
   const activeTeamId = gameSession.activeTeamId || 'team1';
   const activeTeam = gameSession.teams ? gameSession.teams[activeTeamId] : undefined;
   const activeTeamName = activeTeam?.name || (activeTeamId === 'team1' ? t('defaultTeam1Name') : t('defaultTeam2Name'));
@@ -322,6 +348,13 @@ const TurnScreen: React.FC = () => {
     triggerPointBadge('+1');
     playSuccessSound();
     handleGuessedWord(guesserId);
+  };
+
+  const handleRivalGuessed = () => {
+    triggerPointBadge('+1');
+    triggerHaptic('MEDIUM');
+    playSuccessSound();
+    handleRivalGuessedWord();
   };
 
   const handleSkip = () => {
@@ -535,7 +568,37 @@ const TurnScreen: React.FC = () => {
           </div>
         </main>
 
-        {isTeamsMode || isDuoMode ? (
+        {isTeamsMode ? (
+          <section className="w-full max-w-2xl my-2 mb-6 sm:mb-8 text-center px-4 relative z-10 flex flex-col items-center gap-3">
+            {/* Active Team Guess Button */}
+            <button 
+              onClick={() => handleGuessed()} 
+              disabled={!gameSession.currentWord} 
+              className="w-full max-w-md h-20 sm:h-24 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 active:scale-95 text-white font-black text-2xl sm:text-3xl uppercase tracking-wider rounded-full shadow-[0_8px_30px_rgba(16,185,129,0.45)] border-2 border-emerald-300/40 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <span>{t('guessedButton')}</span>
+            </button>
+
+            {/* Rival Team Steal Button (Unlocked after 8s) */}
+            <button
+              onClick={handleRivalGuessed}
+              disabled={!isRivalStealUnlocked}
+              className={`w-full max-w-md h-20 sm:h-24 rounded-full font-black uppercase tracking-wider text-xl sm:text-2xl transition-all duration-300 flex items-center justify-center px-4 shadow-lg ${
+                isRivalStealUnlocked
+                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-white shadow-[0_8px_30px_rgba(245,158,11,0.5)] border-2 border-amber-300/60 active:scale-95 animate-pulse-subtle cursor-pointer'
+                  : 'bg-white/10 text-white/40 border border-white/10 cursor-not-allowed opacity-60'
+              }`}
+            >
+              {isRivalStealUnlocked ? (
+                <span>{t('rivalGuessedButton') || 'Other Team Guessed!'}</span>
+              ) : (
+                <span>
+                  {t('rivalGuessLocked', { seconds: String(rivalCooldownRemaining) }) || `Other Team Guess (${rivalCooldownRemaining}s)`}
+                </span>
+              )}
+            </button>
+          </section>
+        ) : isDuoMode ? (
           <section className="w-full max-w-2xl my-2 mb-8 sm:mb-12 text-center px-4 relative z-10 flex flex-col items-center">
             <button 
               onClick={() => handleGuessed()} 
