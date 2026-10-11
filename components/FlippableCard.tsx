@@ -9,6 +9,7 @@ interface FlippableCardProps {
   isDisabled: boolean;
   isZoomed?: boolean;
   onActionClick?: () => void;
+  onClick?: () => void;
 }
 
 const getOutcomeTheme = (action?: MinigameCardActionType) => {
@@ -95,7 +96,8 @@ const FlippableCard: React.FC<FlippableCardProps> = ({
   isSelected, 
   isDisabled, 
   isZoomed = false,
-  onActionClick 
+  onActionClick,
+  onClick
 }) => {
   const { t } = useTranslations();
 
@@ -161,11 +163,14 @@ const FlippableCard: React.FC<FlippableCardProps> = ({
 
         {/* Card Back (Face-up Revealed Outcome) */}
         <div 
+          onClick={onClick}
           className={`absolute inset-0 ${theme.bg} ${
             isZoomed 
               ? `rounded-3xl border-4 ${theme.border} ${theme.shadow} p-6 sm:p-8 ring-2 ring-white/30 backdrop-blur-md` 
               : `rounded-2xl border-3 ${theme.border} ${theme.shadow} p-4 ring-1 ring-white/30`
-          } flex flex-col items-center justify-between overflow-hidden`}
+          } flex flex-col items-center justify-between overflow-hidden ${
+            onClick ? 'cursor-pointer' : ''
+          }`}
           style={{ 
             backfaceVisibility: 'hidden', 
             transform: 'rotateY(180deg)' 

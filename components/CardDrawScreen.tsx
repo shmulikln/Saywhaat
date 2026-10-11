@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameSessionContext';
 import { useTranslations } from '../contexts/TranslationsContext';
@@ -57,17 +57,45 @@ const CardDrawScreen: React.FC = () => {
     }
   }, [gameSession, isMyTurn, applyCardAction]);
 
+  const decisionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleOpenDecisionModal = useCallback(() => {
+    if (decisionTimerRef.current) {
+      clearTimeout(decisionTimerRef.current);
+      decisionTimerRef.current = null;
+    }
+    triggerHaptic('LIGHT');
+    setPlayerSelectionModalOpen(true);
+  }, []);
+
   useEffect(() => {
     const { minigameState } = gameSession || {};
     if (!minigameState) return;
     const { revealedOutcome, actionApplied } = minigameState;
     if (revealedOutcome && !actionApplied && isMyTurn && revealedOutcome.requiresPlayerChoice) {
-      const timer = setTimeout(() => {
-        setPlayerSelectionModalOpen(true);
-      }, 850);
-      return () => clearTimeout(timer);
+      if (decisionTimerRef.current) {
+        clearTimeout(decisionTimerRef.current);
+      }
+      decisionTimerRef.current = setTimeout(() => {
+        handleOpenDecisionModal();
+      }, 4000);
+      return () => {
+        if (decisionTimerRef.current) {
+          clearTimeout(decisionTimerRef.current);
+          decisionTimerRef.current = null;
+        }
+      };
     }
-  }, [gameSession, isMyTurn]);
+  }, [gameSession?.minigameState?.revealedOutcome, gameSession?.minigameState?.actionApplied, isMyTurn, handleOpenDecisionModal]);
+
+  useEffect(() => {
+    return () => {
+      if (decisionTimerRef.current) {
+        clearTimeout(decisionTimerRef.current);
+        decisionTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const generateToastMessage = (oldPlayers: { [id: string]: Player }, newPlayers: { [id: string]: Player }, outcome: NonNullable<typeof revealedOutcome>, activePlayerId: string, targetPlayerId?: string) => {
@@ -175,22 +203,27 @@ const CardDrawScreen: React.FC = () => {
     </div>
   );
 
+  const canTapToDecide = hasRevealed && !!revealedOutcome?.requiresPlayerChoice && isMyTurn && !actionApplied;
+
   const renderSelectedCard = () => {
     const card = minigameState.cards.find(c => c.id === selectedCardId);
     if (!card) return null;
     return (
       <div className="flex justify-center items-center w-full min-h-[440px] sm:min-h-[520px] py-2 relative z-10 animate-chaos-card-zoom">
-        <div className="relative w-[88vw] max-w-[360px] sm:max-w-[420px] h-[58vh] max-h-[520px] min-h-[420px]">
+        <div 
+          onClick={canTapToDecide ? handleOpenDecisionModal : undefined}
+          className={`relative w-[88vw] max-w-[360px] sm:max-w-[420px] h-[58vh] max-h-[520px] min-h-[420px] transition-transform ${
+            canTapToDecide ? 'cursor-pointer active:scale-[0.98]' : ''
+          }`}
+        >
           <FlippableCard 
             card={card} 
             isFlipped={hasRevealed} 
             isSelected={true} 
             isZoomed={true}
             isDisabled={false} 
-            onActionClick={revealedOutcome?.requiresPlayerChoice && isMyTurn && !actionApplied ? () => {
-              triggerHaptic('LIGHT');
-              setPlayerSelectionModalOpen(true);
-            } : undefined} 
+            onClick={canTapToDecide ? handleOpenDecisionModal : undefined}
+            onActionClick={canTapToDecide ? handleOpenDecisionModal : undefined} 
           />
         </div>
       </div>
