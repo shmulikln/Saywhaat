@@ -7,6 +7,7 @@ import { ChaosEvent, PlayerWithId } from '../types';
 import AppHeader from './AppHeader';
 import TurnChaosModal from './TurnChaosModal';
 import GameRulesModal from './GameRulesModal';
+import { preloadAllSounds } from '../utils/soundUtils';
 
 const GameScreen: React.FC = () => {
   const { gameSession, startTurn, leaveGame, localPlayerId } = useGame();
@@ -28,6 +29,7 @@ const GameScreen: React.FC = () => {
   }, [gameSession?.language, language, setLanguage]);
 
   useEffect(() => {
+    preloadAllSounds();
     console.log(`[GameScreen] Mounted for game: ${gameId}`);
   }, [gameId]);
 

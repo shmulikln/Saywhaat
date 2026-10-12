@@ -14,7 +14,8 @@ import {
   playTurnEndedSound, 
   playSuccessSound, 
   playSkipSound,
-  playHornSound 
+  playHornSound,
+  preloadAllSounds
 } from '../utils/soundUtils';
 
 interface AutoFitWordProps {
@@ -127,6 +128,10 @@ const TurnScreen: React.FC = () => {
   const lastProcessedGuessIdRef = useRef<string | null>(gameSession?.lastGuessEvent?.id || null);
   const prevGameSessionRef = useRef(gameSession);
   const isPlayingCountdownRef = useRef(false);
+
+  useEffect(() => {
+    preloadAllSounds();
+  }, []);
 
   useEffect(() => {
     setWordStartTime(Date.now());
