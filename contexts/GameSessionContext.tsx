@@ -42,6 +42,7 @@ interface GameSessionContextType {
   selectCard: (cardId: string) => void;
   revealCardOutcome: () => void;
   applyCardAction: (payload: { targetPlayerId?: string }) => void;
+  applyCardActionAndEnd: (payload: { targetPlayerId?: string }) => void;
   endMinigame: () => void;
   startMinigameSimulation: () => void;
   resetLoadingState: () => void;
@@ -348,7 +349,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       sessionWithChaos.activeTurnChaos = null;
       sessionWithChaos.duoScore = 0;
       sessionWithChaos.duoCurrentRound = 1;
-      sessionWithChaos.duoTotalRounds = Math.max(2, Math.round(sessionWithChaos.winningScore / 5));
+      sessionWithChaos.duoTotalRounds = sessionWithChaos.duoTotalRounds || Math.max(2, Math.round(sessionWithChaos.winningScore / 5));
       sessionWithChaos.turnTimer = DUO_TURN_DURATION_SECONDS;
     } else if (sessionWithChaos.isChaosMode && Math.random() < CHAOS_EVENT_CHANCE) {
       // FIX: Cast CHAOS_NICKNAMES to any to prevent potential 'unknown' type inference on indexed access using dynamic language key
@@ -902,7 +903,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
           }
 
           const isDuo = baseSession.playMode === 'duo' || (baseSession.playMode !== 'teams' && playerIds.length === 2);
-          const duoTotalRounds = isDuo ? Math.max(2, Math.round(baseSession.winningScore / 5)) : undefined;
+          const duoTotalRounds = isDuo ? (baseSession.duoTotalRounds || Math.max(2, Math.round(baseSession.winningScore / 5))) : undefined;
 
           return {
               ...baseSession,
@@ -1116,7 +1117,39 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (currentGame.gameMode === 'online') {
         runGameTransaction(currentGame.gameId, (db) => db ? applyMinigameOutcome(db, payload.targetPlayerId) : undefined);
     } else {
-        setGameSessionState(applyMinigameOutcome(currentGame, payload.targetPlayerId));
+        const next = applyMinigameOutcome(currentGame, payload.targetPlayerId);
+        gameSessionRef.current = next;
+        setGameSessionState(next);
+    }
+  }, []);
+
+  const applyCardActionAndEnd = useCallback((payload: { targetPlayerId?: string }) => {
+    const currentGame = gameSessionRef.current;
+    if (!currentGame?.minigameState?.revealedOutcome) return;
+
+    const performApplyAndEnd = (session: GameSession): GameSession => {
+      const sessionWithAction = applyMinigameOutcome(session, payload.targetPlayerId);
+      const nextPlayerIndex = (sessionWithAction.currentPlayerIndex + 1) % sessionWithAction.playerOrder.length;
+      return {
+        ...sessionWithAction,
+        minigameState: null,
+        gameState: GameState.IN_GAME,
+        currentPlayerIndex: nextPlayerIndex,
+        currentTurnPlayerId: sessionWithAction.playerOrder[nextPlayerIndex],
+        activeChaosEvent: null,
+        activeTurnChaos: null,
+      };
+    };
+
+    if (currentGame.gameMode === 'online') {
+      runGameTransaction(currentGame.gameId, (db) => db ? performApplyAndEnd(db) : undefined);
+    } else {
+      setGameSessionState(prev => {
+        if (!prev) return prev;
+        const next = performApplyAndEnd(prev);
+        gameSessionRef.current = next;
+        return next;
+      });
     }
   }, []);
 
@@ -1135,7 +1168,9 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (currentGame.gameMode === 'online') {
         runGameTransaction(currentGame.gameId, (db) => db ? performEnd(db) : undefined);
     } else {
-        setGameSessionState(performEnd(currentGame));
+        const next = performEnd(gameSessionRef.current || currentGame);
+        gameSessionRef.current = next;
+        setGameSessionState(next);
     }
   }, []);
 
@@ -1146,13 +1181,13 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const value = useMemo(() => ({
     gameSession, isLoading, localPlayerId, loadingTitle, loadingSteps, isJoinChecklistVisible, joinChecklistSteps, showAdOverlay, setShowAdOverlay,
     createNewGame, createLocalGame, joinGame, addPlayer, switchTeam, requestStartGame, leaveGame, startTurn, advanceTurn, endTurn,
-    handleGuessedWord, handleRivalGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction,
+    handleGuessedWord, handleRivalGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction, applyCardActionAndEnd,
     endMinigame, startMinigameSimulation, resetLoadingState, resetJoinChecklist,
     setLanguage
   }), [
     gameSession, isLoading, localPlayerId, loadingTitle, loadingSteps, isJoinChecklistVisible, joinChecklistSteps, showAdOverlay, setShowAdOverlay,
     createNewGame, createLocalGame, joinGame, addPlayer, switchTeam, requestStartGame, leaveGame, startTurn, advanceTurn, endTurn,
-    handleGuessedWord, handleRivalGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction,
+    handleGuessedWord, handleRivalGuessedWord, handleSkipWord, startRematch, continueRematch, selectCard, revealCardOutcome, applyCardAction, applyCardActionAndEnd,
     endMinigame, startMinigameSimulation, resetLoadingState, resetJoinChecklist,
     setLanguage
   ]);

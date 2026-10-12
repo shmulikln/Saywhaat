@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGame } from '../contexts/GameSessionContext';
@@ -9,14 +8,35 @@ import FlippableCard from './FlippableCard';
 import PlayerSelectionModal from './PlayerSelectionModal';
 import { triggerHaptic } from '../utils/nativeUtils';
 
+interface CardFlight {
+  cardId: string;
+  deltaX: number;
+  deltaY: number;
+  scale: number;
+  isLanded: boolean;
+}
+
 const CardDrawScreen: React.FC = () => {
-  const { gameSession, selectCard, revealCardOutcome, applyCardAction, endMinigame, localPlayerId } = useGame();
+  const { 
+    gameSession, 
+    selectCard, 
+    revealCardOutcome, 
+    applyCardAction, 
+    applyCardActionAndEnd, 
+    endMinigame, 
+    localPlayerId 
+  } = useGame();
   const { t } = useTranslations();
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const [isPlayerSelectionModalOpen, setPlayerSelectionModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string, key: number } | null>(null);
   const prevPlayersRef = useRef(gameSession?.players);
+
+  // Flight animation state for smooth card zoom from its original position
+  const [flight, setFlight] = useState<CardFlight | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<{ [cardId: string]: HTMLDivElement | null }>({});
 
   const isMyTurn = gameSession?.gameMode === 'local' || localPlayerId === gameSession?.minigameState?.activePlayerId;
   const { minigameState } = gameSession || {};
@@ -34,16 +54,60 @@ const CardDrawScreen: React.FC = () => {
     }
   }, [gameSession, gameId, navigate]);
 
+  // Synchronize remote card selection for spectators or fallback
+  useEffect(() => {
+    if (selectedCardId && !flight && containerRef.current) {
+      const cardEl = cardRefs.current[selectedCardId];
+      if (cardEl) {
+        const startRect = cardEl.getBoundingClientRect();
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const targetCenterX = containerRect.left + containerRect.width / 2;
+        const targetCenterY = containerRect.top + containerRect.height / 2;
+        const startCenterX = startRect.left + startRect.width / 2;
+        const startCenterY = startRect.top + startRect.height / 2;
+        const targetWidth = Math.min(window.innerWidth * 0.88, window.innerWidth >= 640 ? 420 : 360);
+        const scale = Math.min(startRect.width / targetWidth, 0.45);
+        const deltaX = startCenterX - targetCenterX;
+        const deltaY = startCenterY - targetCenterY;
+        setFlight({ cardId: selectedCardId, deltaX, deltaY, scale, isLanded: false });
+      } else {
+        setFlight({ cardId: selectedCardId, deltaX: 0, deltaY: 0, scale: 0.35, isLanded: true });
+      }
+    }
+  }, [selectedCardId, flight]);
+
+  // Reset flight when selectedCardId clears
+  useEffect(() => {
+    if (!selectedCardId) {
+      setFlight(null);
+    }
+  }, [selectedCardId]);
+
+  // Trigger smooth transition from starting position to center on the next frame
+  useEffect(() => {
+    if (flight && !flight.isLanded) {
+      const raf1 = requestAnimationFrame(() => {
+        const raf2 = requestAnimationFrame(() => {
+          setFlight(prev => prev ? { ...prev, isLanded: true } : null);
+        });
+        return () => cancelAnimationFrame(raf2);
+      });
+      return () => cancelAnimationFrame(raf1);
+    }
+  }, [flight?.isLanded]);
+
+  // Reveal card after it smoothly lands and centers (540ms)
   useEffect(() => {
     if (selectedCardId && !hasRevealed && isMyTurn) {
       const timer = setTimeout(() => {
         triggerHaptic('LIGHT');
         revealCardOutcome();
-      }, 300);
+      }, 540);
       return () => clearTimeout(timer);
     }
   }, [selectedCardId, hasRevealed, isMyTurn, revealCardOutcome]);
 
+  // Automatically apply outcomes for cards that do NOT require a player choice
   useEffect(() => {
     const { minigameState } = gameSession || {};
     if (!minigameState) return;
@@ -68,6 +132,7 @@ const CardDrawScreen: React.FC = () => {
     setPlayerSelectionModalOpen(true);
   }, []);
 
+  // Launch modal after 4 seconds if not tapped yet
   useEffect(() => {
     const { minigameState } = gameSession || {};
     if (!minigameState) return;
@@ -173,29 +238,63 @@ const CardDrawScreen: React.FC = () => {
   const activePlayer = gameSession.players[minigameState.activePlayerId];
   const activePlayerName = activePlayer ? `${activePlayer.name}${activePlayer.chaosNickname ? ` ${activePlayer.chaosNickname}` : ''}` : '';
 
-  const handleCardClick = (cardId: string) => {
+  const handleCardClick = (cardId: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if (selectedCardId || flight) return;
     triggerHaptic('LIGHT');
+
+    const cardEl = e.currentTarget;
+    if (containerRef.current) {
+      const startRect = cardEl.getBoundingClientRect();
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const targetCenterX = containerRect.left + containerRect.width / 2;
+      const targetCenterY = containerRect.top + containerRect.height / 2;
+      const startCenterX = startRect.left + startRect.width / 2;
+      const startCenterY = startRect.top + startRect.height / 2;
+      const targetWidth = Math.min(window.innerWidth * 0.88, window.innerWidth >= 640 ? 420 : 360);
+      const scale = Math.min(startRect.width / targetWidth, 0.45);
+      const deltaX = startCenterX - targetCenterX;
+      const deltaY = startCenterY - targetCenterY;
+
+      setFlight({
+        cardId,
+        deltaX,
+        deltaY,
+        scale,
+        isLanded: false,
+      });
+    }
+
     selectCard(cardId);
   };
 
   const renderThreeCards = () => (
-    <div className="flex justify-center items-center gap-3 sm:gap-6 w-full min-h-[300px] py-4 relative z-10 animate-fade-in">
+    <div 
+      className={`flex justify-center items-center gap-3 sm:gap-6 w-full min-h-[300px] py-4 relative z-10 transition-opacity duration-300 ${
+        selectedCardId ? 'pointer-events-none' : 'animate-fade-in'
+      }`}
+    >
       {minigameState.cards.map((card) => {
+        const isThisSelected = selectedCardId === card.id;
         const isClickable = isMyTurn && !selectedCardId;
         return (
           <div 
             key={card.id} 
-            className={`relative w-[29%] max-w-[130px] transition-all duration-300 ${
+            ref={(el) => { cardRefs.current[card.id] = el; }}
+            className={`relative w-[29%] max-w-[130px] transition-all duration-400 ${
               isClickable ? 'cursor-pointer hover:scale-105 hover:-translate-y-3 active:scale-95' : ''
+            } ${
+              selectedCardId
+                ? (isThisSelected ? 'opacity-0' : 'opacity-0 scale-75')
+                : 'opacity-100 scale-100'
             }`} 
             onClick={(e) => { 
               e.stopPropagation(); 
-              if (isClickable) handleCardClick(card.id); 
+              if (isClickable) handleCardClick(card.id, e); 
             }}
           >
             <div className="pt-[145%]"></div>
             <div className="absolute inset-0">
-                <FlippableCard card={card} isFlipped={false} isSelected={false} isDisabled={false} />
+              <FlippableCard card={card} isFlipped={false} isSelected={false} isDisabled={false} />
             </div>
           </div>
         );
@@ -208,8 +307,26 @@ const CardDrawScreen: React.FC = () => {
   const renderSelectedCard = () => {
     const card = minigameState.cards.find(c => c.id === selectedCardId);
     if (!card) return null;
+
+    const isLanded = flight?.isLanded ?? true;
+    const deltaX = flight?.deltaX ?? 0;
+    const deltaY = flight?.deltaY ?? 0;
+    const scale = flight?.scale ?? 1;
+
     return (
-      <div className="flex justify-center items-center w-full min-h-[440px] sm:min-h-[520px] py-2 relative z-10 animate-chaos-card-zoom">
+      <div 
+        className="flex justify-center items-center w-full min-h-[440px] sm:min-h-[520px] py-2 relative z-20 pointer-events-auto"
+        style={{
+          transform: isLanded 
+            ? 'translate3d(0, 0, 0) scale(1)' 
+            : `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scale})`,
+          transition: isLanded 
+            ? 'transform 520ms cubic-bezier(0.16, 1, 0.3, 1)' 
+            : 'none',
+          transformOrigin: 'center center',
+          willChange: 'transform',
+        }}
+      >
         <div 
           onClick={canTapToDecide ? handleOpenDecisionModal : undefined}
           className={`relative w-[88vw] max-w-[360px] sm:max-w-[420px] h-[58vh] max-h-[520px] min-h-[420px] transition-transform ${
@@ -255,12 +372,22 @@ const CardDrawScreen: React.FC = () => {
             </p>
           </div>
           
-          <div className="w-full flex-grow flex items-center justify-center">
-            {selectedCardId ? renderSelectedCard() : renderThreeCards()}
+          <div 
+            ref={containerRef}
+            className="w-full flex-grow grid grid-cols-1 grid-rows-1 items-center justify-items-center relative"
+          >
+            <div className="col-start-1 row-start-1 w-full flex items-center justify-center">
+              {renderThreeCards()}
+            </div>
+            {selectedCardId && (
+              <div className="col-start-1 row-start-1 w-full flex items-center justify-center">
+                {renderSelectedCard()}
+              </div>
+            )}
           </div>
 
           <div className="h-24 flex items-center justify-center w-full mt-2">
-            {hasRevealed && minigameState.actionApplied && isMyTurn && (
+            {hasRevealed && minigameState.actionApplied && isMyTurn && !revealedOutcome?.requiresPlayerChoice && (
               <button 
                 onClick={() => {
                   triggerHaptic('LIGHT');
@@ -278,7 +405,10 @@ const CardDrawScreen: React.FC = () => {
         <PlayerSelectionModal 
           prompt={t(revealedOutcome.playerChoicePromptKey)} 
           onClose={() => setPlayerSelectionModalOpen(false)} 
-          onPlayerSelected={() => setPlayerSelectionModalOpen(false)} 
+          onPlayerSelected={(targetPlayerId) => {
+            setPlayerSelectionModalOpen(false);
+            applyCardActionAndEnd({ targetPlayerId });
+          }} 
         />
       )}
     </>

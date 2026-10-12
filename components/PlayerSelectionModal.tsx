@@ -9,11 +9,11 @@ import { triggerHaptic } from '../utils/nativeUtils';
 interface PlayerSelectionModalProps {
   prompt: string;
   onClose: () => void;
-  onPlayerSelected: () => void;
+  onPlayerSelected: (targetPlayerId: string) => void;
 }
 
 const PlayerSelectionModal: React.FC<PlayerSelectionModalProps> = ({ prompt, onClose, onPlayerSelected }) => {
-  const { gameSession, applyCardAction } = useGame();
+  const { gameSession } = useGame();
   const { t } = useTranslations();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
@@ -29,8 +29,7 @@ const PlayerSelectionModal: React.FC<PlayerSelectionModalProps> = ({ prompt, onC
       triggerHaptic('LIGHT');
       setIsClosing(true);
       setTimeout(() => {
-        applyCardAction({ targetPlayerId: selectedPlayerId });
-        onPlayerSelected();
+        onPlayerSelected(selectedPlayerId);
       }, 220);
     }
   };
