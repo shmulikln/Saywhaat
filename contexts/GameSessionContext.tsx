@@ -157,7 +157,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (!isLeavingRef.current) {
             setGameSessionState(initialSession);
             if (initialSession?.language) {
-              setLanguage(initialSession.language);
+              setLanguage(initialSession.language, false);
             }
         }
 
@@ -165,7 +165,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
           if (isLeavingRef.current) return;
           setGameSessionState(session);
           if (session?.language) {
-            setLanguage(session.language);
+            setLanguage(session.language, false);
           }
         });
 
@@ -500,7 +500,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (!session) {
         throw new Error(t('gameNotFound'));
       }
-      setLanguage(session.language);
+      setLanguage(session.language, false);
       updateStepStatus(currentStepKey, 'completed');
 
       currentStepKey = 'loadingStepRender';

@@ -198,8 +198,18 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
-    const langToSet = gameSession?.language || DEFAULT_LANGUAGE;
-    setLanguage(langToSet);
+    if (gameSession?.language) {
+      setLanguage(gameSession.language, false);
+    } else {
+      try {
+        const savedLang = localStorage.getItem('saywhaaat_language');
+        if (savedLang && Object.values(Language).includes(savedLang as Language)) {
+          setLanguage(savedLang as Language, true);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
   }, [gameSession?.language, setLanguage]);
 
   useEffect(() => {

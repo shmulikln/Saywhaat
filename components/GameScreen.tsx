@@ -23,7 +23,7 @@ const GameScreen: React.FC = () => {
 
   useEffect(() => {
     if (gameSession?.language && gameSession.language !== language) {
-      setLanguage(gameSession.language);
+      setLanguage(gameSession.language, false);
     }
   }, [gameSession?.language, language, setLanguage]);
 

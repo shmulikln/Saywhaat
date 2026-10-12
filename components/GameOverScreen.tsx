@@ -82,7 +82,7 @@ const GameOverScreen: React.FC = () => {
 
   React.useEffect(() => {
     if (gameSession?.language && gameSession.language !== language) {
-      setLanguage(gameSession.language);
+      setLanguage(gameSession.language, false);
     }
   }, [gameSession?.language, language, setLanguage]);
 

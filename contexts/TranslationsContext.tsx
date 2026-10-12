@@ -13,9 +13,40 @@ const translationsData = {
   [Language.ZH]: zhTranslations,
 };
 
+const getInitialLanguage = (): Language => {
+  try {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlLang = searchParams.get('lang');
+      if (urlLang && Object.values(Language).includes(urlLang as Language)) {
+        try {
+          localStorage.setItem('saywhaaat_language', urlLang);
+        } catch (_) {}
+        return urlLang as Language;
+      }
+      const savedLang = localStorage.getItem('saywhaaat_language');
+      if (savedLang && Object.values(Language).includes(savedLang as Language)) {
+        return savedLang as Language;
+      }
+      if (typeof navigator !== 'undefined' && navigator.language) {
+        const sysLang = navigator.language.toLowerCase();
+        if (sysLang.startsWith('he')) return Language.HE;
+        if (sysLang.startsWith('ar')) return Language.AR;
+        if (sysLang.startsWith('pt')) return Language.PT;
+        if (sysLang.startsWith('hi')) return Language.HI;
+        if (sysLang.startsWith('id')) return Language.ID;
+        if (sysLang.startsWith('zh')) return Language.ZH;
+      }
+    }
+  } catch (error) {
+    console.warn('Could not access localStorage for initial language:', error);
+  }
+  return DEFAULT_LANGUAGE;
+};
+
 interface TranslationsContextType {
   language: Language;
-  setLanguage: (language: Language) => void;
+  setLanguage: (language: Language, persist?: boolean) => void;
   t: (key: keyof AppTranslations, replacements?: { [key: string]: string | number }) => string;
   isLoading: boolean;
 }
@@ -23,39 +54,32 @@ interface TranslationsContextType {
 const TranslationsContext = createContext<TranslationsContextType | undefined>(undefined);
 
 export const TranslationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>(DEFAULT_LANGUAGE);
-  const [isLoading, setIsLoading] = useState(true);
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize language from URL or localStorage safely after mount
+  // Keep html document dir and lang attributes in sync
   useEffect(() => {
-    try {
-      const searchParams = new URLSearchParams(window.location.search);
-      const urlLang = searchParams.get('lang');
-      if (urlLang && Object.values(Language).includes(urlLang as Language)) {
-        setLanguageState(urlLang as Language);
-        localStorage.setItem('saywhaaat_language', urlLang);
-        return;
+    if (typeof document !== 'undefined') {
+      if (language === Language.HE || language === Language.AR) {
+        document.documentElement.dir = 'rtl';
+        document.documentElement.lang = language;
+      } else {
+        document.documentElement.dir = 'ltr';
+        document.documentElement.lang = language;
       }
-      const savedLang = localStorage.getItem('saywhaaat_language');
-      if (savedLang && Object.values(Language).includes(savedLang as Language)) {
-        setLanguageState(savedLang as Language);
-      }
-    } catch (error) {
-      // localStorage might not be available in some environments
-      console.warn('Could not access localStorage for language preference:', error);
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const translations = translationsData[language] || translationsData[Language.EN];
 
-  const setLanguage = useCallback((newLanguage: Language) => {
+  const setLanguage = useCallback((newLanguage: Language, persist: boolean = true) => {
     setLanguageState(newLanguage);
-    try {
-      localStorage.setItem('saywhaaat_language', newLanguage);
-    } catch (error) {
-      console.warn('Could not save language preference to localStorage:', error);
+    if (persist) {
+      try {
+        localStorage.setItem('saywhaaat_language', newLanguage);
+      } catch (error) {
+        console.warn('Could not save language preference to localStorage:', error);
+      }
     }
   }, []);
 
