@@ -14,7 +14,7 @@ const AdOverlay: React.FC<AdOverlayProps> = ({ onAdClosed }) => {
       try {
         await AdMob.prepareInterstitial({
           adId: 'ca-app-pub-7599308880531325/6231560290',
-          isTesting: true,
+          isTesting: false,
         });
         setIsLoading(false);
         await AdMob.showInterstitial();
