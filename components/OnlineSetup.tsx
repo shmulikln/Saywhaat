@@ -21,6 +21,8 @@ interface OnlineSetupProps {
   selectedJoinTeamId: 'team1' | 'team2';
   setSelectedJoinTeamId: (teamId: 'team1' | 'team2') => void;
   renderSharedOptions: () => React.ReactNode;
+  roomCodeError?: string | null;
+  isCheckingRoomCode?: boolean;
 }
 
 const OnlineSetup: React.FC<OnlineSetupProps> = ({
@@ -35,7 +37,9 @@ const OnlineSetup: React.FC<OnlineSetupProps> = ({
   detectedTeams,
   selectedJoinTeamId,
   setSelectedJoinTeamId,
-  renderSharedOptions
+  renderSharedOptions,
+  roomCodeError,
+  isCheckingRoomCode
 }) => {
   const { t } = useTranslations();
   const isOnlineAvailable = isFirebaseConfigured();
@@ -104,18 +108,37 @@ const OnlineSetup: React.FC<OnlineSetupProps> = ({
           <div className="animate-fade-in space-y-6">
             <div className="px-1">
               <label htmlFor="joinGameCode" className="block text-sm font-bold uppercase tracking-widest text-white/60 mb-3 px-2">{t('gameCode')}</label>
-              <input 
-                id="joinGameCode"
-                type="text" 
-                value={joinGameCode} 
-                onChange={(e) => setJoinGameCode(e.target.value.toUpperCase())} 
-                placeholder="ABCD" 
-                maxLength={4} 
-                className={`${inputBaseClasses} ${inputBgColor} font-mono tracking-[0.35em] text-center font-black text-3xl text-[#FBBF24] placeholder-white/20`}
-              />
+              <div className="relative">
+                <input 
+                  id="joinGameCode"
+                  type="text" 
+                  value={joinGameCode} 
+                  onChange={(e) => setJoinGameCode(e.target.value.toUpperCase())} 
+                  placeholder="ABCD" 
+                  maxLength={4} 
+                  className={`${inputBaseClasses} ${inputBgColor} font-mono tracking-[0.35em] text-center font-black text-3xl ${
+                    roomCodeError 
+                      ? 'text-red-400 border-red-500/70 focus:ring-red-400 focus:border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+                      : 'text-[#FBBF24]'
+                  } placeholder-white/20`}
+                />
+                {isCheckingRoomCode && (
+                  <div className="absolute ltr:right-4 rtl:left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="w-5 h-5 border-2 border-[#FBBF24] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </div>
               <p className="text-xs text-white/60 text-center px-4 mt-2.5 leading-relaxed font-medium">
                 {t('gameCodeHelperText')}
               </p>
+              {roomCodeError && (
+                <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-200 text-xs sm:text-sm font-bold text-center flex items-center justify-center gap-2 animate-fade-in shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <span>{roomCodeError}</span>
+                </div>
+              )}
             </div>
 
             {detectedGameMode === 'teams' ? (
@@ -150,7 +173,7 @@ const OnlineSetup: React.FC<OnlineSetupProps> = ({
                   </button>
                 </div>
               </div>
-            ) : detectedGameMode === 'ffa' || (!detectedGameMode && joinGameCode.length < 4) ? (
+            ) : (
               <div className="px-1">
                 <label htmlFor="joinPlayerName" className="block text-sm font-bold uppercase tracking-widest text-white/60 mb-3 px-2">{t('playerNameLabel')}</label>
                 <input 
@@ -163,7 +186,7 @@ const OnlineSetup: React.FC<OnlineSetupProps> = ({
                   maxLength={20}
                 />
               </div>
-            ) : null}
+            )}
           </div>
         )}
       </div>

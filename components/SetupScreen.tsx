@@ -74,6 +74,8 @@ const SetupScreen: React.FC = () => {
   const [detectedGameMode, setDetectedGameMode] = useState<'ffa' | 'teams' | null>(null);
   const [detectedTeams, setDetectedTeams] = useState<{ team1: { name: string }; team2: { name: string } } | null>(null);
   const [selectedJoinTeamId, setSelectedJoinTeamId] = useState<'team1' | 'team2'>('team1');
+  const [roomCodeError, setRoomCodeError] = useState<string | null>(null);
+  const [isCheckingRoomCode, setIsCheckingRoomCode] = useState(false);
 
   // Local State
   const [localPlayers, setLocalPlayers] = useState<Player[]>([]);
@@ -130,11 +132,19 @@ const SetupScreen: React.FC = () => {
     if (intent === 'join' && (code === 'DEMO' || code === 'TEST')) {
       setDetectedGameMode('ffa');
       setDetectedTeams(null);
+      setRoomCodeError(null);
+      setIsCheckingRoomCode(false);
       return;
     }
     if (intent === 'join' && code.length === 4) {
+      setIsCheckingRoomCode(true);
+      setRoomCodeError(null);
+      let isCurrent = true;
       getGameFromDb(code).then((session) => {
+        if (!isCurrent) return;
+        setIsCheckingRoomCode(false);
         if (session) {
+          setRoomCodeError(null);
           if (session.playMode === 'teams') {
             setDetectedGameMode('teams');
             if (session.teams) {
@@ -147,13 +157,28 @@ const SetupScreen: React.FC = () => {
             setDetectedGameMode('ffa');
             setDetectedTeams(null);
           }
+        } else {
+          setDetectedGameMode(null);
+          setDetectedTeams(null);
+          setRoomCodeError(t('gameNotFound'));
         }
-      }).catch(() => {});
+      }).catch(() => {
+        if (!isCurrent) return;
+        setIsCheckingRoomCode(false);
+        setDetectedGameMode(null);
+        setDetectedTeams(null);
+        setRoomCodeError(t('gameNotFound'));
+      });
+      return () => {
+        isCurrent = false;
+      };
     } else {
       setDetectedGameMode(null);
       setDetectedTeams(null);
+      setRoomCodeError(null);
+      setIsCheckingRoomCode(false);
     }
-  }, [intent, joinGameCode]);
+  }, [intent, joinGameCode, t]);
 
   // --- Handlers ---
   const handleCreateOnlineGame = useCallback(async () => {
@@ -175,13 +200,19 @@ const SetupScreen: React.FC = () => {
       return;
     }
     if (detectedGameMode === 'teams') {
-      await joinGame(joinGameCode, '', selectedJoinTeamId);
+      const session = await joinGame(joinGameCode, '', selectedJoinTeamId);
+      if (!session) {
+        setRoomCodeError(t('gameNotFound'));
+      }
     } else {
       if (!joinPlayerName.trim()) {
         alert(t('nameIsRequired'));
         return;
       }
-      await joinGame(joinGameCode, joinPlayerName);
+      const session = await joinGame(joinGameCode, joinPlayerName);
+      if (!session) {
+        setRoomCodeError(t('gameNotFound'));
+      }
     }
   }, [joinGame, joinGameCode, joinPlayerName, detectedGameMode, selectedJoinTeamId, isProcessing, t]);
   
@@ -408,6 +439,7 @@ const SetupScreen: React.FC = () => {
         if (playMode === 'teams') return true;
         return hostName.trim().length > 0;
       }
+      if (roomCodeError) return false;
       const code = joinGameCode.trim().toUpperCase();
       if (code === 'DEMO' || code === 'TEST') {
         return true;
@@ -415,7 +447,7 @@ const SetupScreen: React.FC = () => {
       if (detectedGameMode === 'teams') {
         return joinGameCode.length === 4;
       }
-      return joinPlayerName.trim().length > 0 && joinGameCode.length === 4;
+      return detectedGameMode === 'ffa' && joinPlayerName.trim().length > 0 && joinGameCode.length === 4;
     }
     if (playMode === 'teams') return true;
     return localPlayers.length >= 2;
@@ -568,6 +600,8 @@ const SetupScreen: React.FC = () => {
                     selectedJoinTeamId={selectedJoinTeamId}
                     setSelectedJoinTeamId={setSelectedJoinTeamId}
                     renderSharedOptions={renderSharedOptions}
+                    roomCodeError={roomCodeError}
+                    isCheckingRoomCode={isCheckingRoomCode}
                   />
                 ) : (
                   <LocalSetup
