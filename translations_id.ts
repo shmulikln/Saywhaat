@@ -55,6 +55,7 @@ export const idTranslations: AppTranslations = {
   simulateMinigame: "Simulasi Minigame",
   enterGameCodePlaceholder: "KODE",
   gameCode: "Kode Permainan",
+  gameCodeHelperText: "Masukkan 4 huruf kode ruangan yang ditampilkan di perangkat host. Untuk membuat game Anda sendiri, kembali ke menu utama dan pilih 'Buat Game Baru'.",
   lobbyTitle: "Lobi Permainan",
   scanToJoin: "Scan kode QR untuk gabung!",
   shareLink: "Salin Link",

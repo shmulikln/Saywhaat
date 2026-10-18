@@ -113,6 +113,9 @@ const OnlineSetup: React.FC<OnlineSetupProps> = ({
                 maxLength={4} 
                 className={`${inputBaseClasses} ${inputBgColor} font-mono tracking-[0.35em] text-center font-black text-3xl text-[#FBBF24] placeholder-white/20`}
               />
+              <p className="text-xs text-white/60 text-center px-4 mt-2.5 leading-relaxed font-medium">
+                {t('gameCodeHelperText')}
+              </p>
             </div>
 
             {detectedGameMode === 'teams' ? (

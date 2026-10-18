@@ -56,6 +56,7 @@ export const heTranslations: AppTranslations = {
     simulateMinigame: "הדמיית מיני-משחק",
     enterGameCodePlaceholder: "קוד",
     gameCode: "קוד משחק",
+    gameCodeHelperText: "הזן את קוד החדר בן 4 האותיות ממכשיר המארח. לפתיחת משחק משלך, חזור לתפריט הראשי ובחר 'משחק חדש'.",
     lobbyTitle: "לובי משחק",
     scanToJoin: "סרוק QR כדי להצטרף!",
     shareLink: "העתק קישור",

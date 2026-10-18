@@ -55,6 +55,7 @@ export const hiTranslations: AppTranslations = {
   simulateMinigame: "मिनी-गेम सिम्युलेट करें",
   enterGameCodePlaceholder: "कोड",
   gameCode: "गेम कोड",
+  gameCodeHelperText: "होस्ट के डिवाइस पर दिखाया गया 4-अक्षरों का रूम कोड दर्ज करें। अपना गेम होस्ट करने के लिए मुख्य मेनू पर लौटें और 'नया गेम बनाएं' चुनें।",
   lobbyTitle: "गेम लॉबी",
   scanToJoin: "शामिल होने के लिए QR कोड स्कैन करें!",
   shareLink: "लिंक कॉपी करें",

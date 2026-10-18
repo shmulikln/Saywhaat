@@ -70,7 +70,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   
   const location = useLocation();
   const navigate = useNavigate();
-  const { t, setLanguage } = useTranslations();
+  const { t, language, setLanguage } = useTranslations();
   
   const getGameIdFromPath = (path: string): string | undefined => {
     const match = path.match(/\/(?:lobby|game|turn|minigame|gameover)\/([A-Z0-9]{4}|local)/i);
@@ -495,6 +495,27 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setLoadingSteps(steps);
     let currentStepKey: keyof AppTranslations = 'loadingStepVerifyCode';
 
+    if (upperCaseGameId === 'DEMO' || upperCaseGameId === 'TEST') {
+      try {
+        updateStepStatus(currentStepKey, 'completed');
+        currentStepKey = 'loadingStepRender';
+        updateStepStatus(currentStepKey, 'in-progress');
+        await createLocalGame([playerName?.trim() || 'Reviewer', 'Alex', 'Sam'], language, 10, false, 'ffa');
+        updateStepStatus(currentStepKey, 'completed');
+        currentStepKey = 'loadingStepNavigate';
+        updateStepStatus(currentStepKey, 'completed');
+        setTimeout(() => {
+          setIsFetching(false);
+          isCreatingOrJoiningRef.current = false;
+        }, 400);
+        return gameSessionRef.current;
+      } catch (error: any) {
+        setIsFetching(false);
+        isCreatingOrJoiningRef.current = false;
+        return null;
+      }
+    }
+
     try {
       updateStepStatus(currentStepKey, 'in-progress');
       const session = await getGameFromDb(upperCaseGameId);
@@ -528,7 +549,7 @@ export const GameSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
       isCreatingOrJoiningRef.current = false;
       return null;
     }
-  }, [t, navigate, updateStepStatus]);
+  }, [t, navigate, updateStepStatus, language, createLocalGame]);
 
   const addPlayer = useCallback(async (playerName?: string, teamId?: 'team1' | 'team2') => {
     const updateStep = (key: keyof AppTranslations, status: LoadingStatus) => {

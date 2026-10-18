@@ -55,6 +55,7 @@ export const arTranslations: AppTranslations = {
   simulateMinigame: "محاكاة اللعبة المصغرة",
   enterGameCodePlaceholder: "الرمز",
   gameCode: "رمز اللعبة",
+  gameCodeHelperText: "أدخل رمز الغرفة المكون من 4 أحرف المعروض على جهاز المضيف. لاستضافة لعبتك الخاصة، ارجع إلى القائمة الرئيسية واختر 'إنشاء لعبة جديدة'.",
   lobbyTitle: "غرفة الانتظار",
   scanToJoin: "امسح الرمز للدخول!",
   shareLink: "نسخ الرابط",

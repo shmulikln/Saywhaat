@@ -53,6 +53,7 @@ export const ptTranslations: AppTranslations = {
   simulateMinigame: "Simular Minijogo",
   enterGameCodePlaceholder: "CÓDIGO",
   gameCode: "Código do Jogo",
+  gameCodeHelperText: "Digite o código de 4 letras exibido no dispositivo do anfitrião. Para criar seu próprio jogo, volte e selecione 'Criar Novo Jogo'.",
   lobbyTitle: "Sala de Espera",
   scanToJoin: "Escanear QR code para entrar!",
   shareLink: "Copiar Link",

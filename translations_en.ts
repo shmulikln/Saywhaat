@@ -60,6 +60,7 @@ export const enTranslations: AppTranslations = {
   simulateMinigame: "Simulate Minigame",
   enterGameCodePlaceholder: "CODE",
   gameCode: "Game Code",
+  gameCodeHelperText: "Enter the 4-letter room code from the host device. To host your own game, return to the main menu and tap 'Create New Game'.",
   lobbyTitle: "Game Lobby",
   scanToJoin: "Scan QR code to join!",
   shareLink: "Copy Link",

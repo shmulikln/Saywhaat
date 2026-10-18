@@ -126,8 +126,14 @@ const SetupScreen: React.FC = () => {
 
   // Detect game mode when joining with code
   useEffect(() => {
-    if (intent === 'join' && joinGameCode.trim().length === 4) {
-      getGameFromDb(joinGameCode.trim().toUpperCase()).then((session) => {
+    const code = joinGameCode.trim().toUpperCase();
+    if (intent === 'join' && (code === 'DEMO' || code === 'TEST')) {
+      setDetectedGameMode('ffa');
+      setDetectedTeams(null);
+      return;
+    }
+    if (intent === 'join' && code.length === 4) {
+      getGameFromDb(code).then((session) => {
         if (session) {
           if (session.playMode === 'teams') {
             setDetectedGameMode('teams');
@@ -162,6 +168,12 @@ const SetupScreen: React.FC = () => {
 
   const handleJoinOnlineGame = useCallback(async () => {
     if (!joinGameCode.trim() || isProcessing) return;
+    const code = joinGameCode.trim().toUpperCase();
+    const isDemo = code === 'DEMO' || code === 'TEST';
+    if (isDemo) {
+      await joinGame(code, joinPlayerName.trim() || 'Reviewer');
+      return;
+    }
     if (detectedGameMode === 'teams') {
       await joinGame(joinGameCode, '', selectedJoinTeamId);
     } else {
@@ -395,6 +407,10 @@ const SetupScreen: React.FC = () => {
       if (intent === 'create') {
         if (playMode === 'teams') return true;
         return hostName.trim().length > 0;
+      }
+      const code = joinGameCode.trim().toUpperCase();
+      if (code === 'DEMO' || code === 'TEST') {
+        return true;
       }
       if (detectedGameMode === 'teams') {
         return joinGameCode.length === 4;

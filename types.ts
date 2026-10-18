@@ -92,6 +92,7 @@ export interface AppTranslations {
   simulateMinigame: string;
   enterGameCodePlaceholder: string;
   gameCode: string;
+  gameCodeHelperText: string;
   lobbyTitle: string;
   scanToJoin: string;
   shareLink: string;

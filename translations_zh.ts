@@ -55,6 +55,7 @@ export const zhTranslations: AppTranslations = {
   simulateMinigame: "模擬小遊戲",
   enterGameCodePlaceholder: "代碼",
   gameCode: "遊戲代碼",
+  gameCodeHelperText: "請輸入主持人設備上顯示的 4 位房間代碼。若要自己創建遊戲，請返回主選單並選擇「創建新遊戲」。",
   lobbyTitle: "遊戲大廳",
   scanToJoin: "掃描 QR Code 加入！",
   shareLink: "複製連結",
